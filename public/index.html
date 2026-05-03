@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+  <html lang="en">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkOrder Pro</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#001e40">
+  <style>
+  *{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:#1e293b}
+#login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#001e40 0%,#003570 100%);display:flex;align-items:center;justify-content:center;z-index:9999}
+.login-box{background:#fff;border-radius:16px;padding:48px 40px;width:100%;max-width:400px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+  .login-logo{font-size:32px;font-weight:800;color:#001e40;margin-bottom:8px}
+.login-sub{color:#64748b;margin-bottom:32px;font-size:14px}
+.login-title{font-size:18px;font-weight:600;margin-bottom:20px;color:#1e293b}
+.user-btn{display:block;width:100%;padding:14px;margin-bottom:12px;border:2px solid #e2e8f0;border-radius:10px;background:#fff;cursor:pointer;font-size:16px;font-weight:600;color:#1e293b;transition:all .2s}
+.user-btn:hover{border-color:#2563eb;background:#eff6ff;color:#2563eb}
+.user-btn .role{display:block;font-size:12px;font-weight:400;color:#64748b}
+#app{display:none;height:100vh;overflow:hidden}
+.app-layout{display:flex;height:100vh}
+.sidebar{width:240px;background:#001e40;color:#fff;display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-logo{padding:20px;font-size:20px;font-weight:800;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-logo span{color:#60a5fa}
+  .nav-section{padding:12px 8px;font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.1em;margin-top:8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:2px 8px;border-radius:8px;cursor:pointer;font-size:14px;color:rgba(255,255,255,.7);transition:all .2s}
+.nav-item:hover{background:rgba(255,255,255,.1);color:#fff}
+.nav-item.active{background:#2563eb;color:#fff}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+.user-info{margin-top:auto;padding:16px;border-top:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:10px}
+.user-avatar{width:36px;height:36px;border-radius:50%;background:#2563eb;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.user-name{font-size:14px;font-weight:600}
+.user-role{font-size:11px;color:rgba(255,255,255,.5)}
+.logout-btn{margin-left:auto;background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;padding:4px}
+.logout-btn:hover{color:#fff}
+.main-content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.top-bar{background:#fff;padding:16px 24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .top-bar h1{font-size:20px;font-weight:700;color:#001e40}
+.search-box{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;flex:1;max-width:400px}
+.search-box input{border:none;background:none;outline:none;font-size:14px;width:100%;color:#1e293b}
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:600;transition:all .2s}
+.btn-primary{background:#2563eb;color:#fff}
+.btn-primary:hover{background:#1d4ed8}
+.btn-secondary{background:#f1f5f9;color:#475569}
+.btn-secondary:hover{background:#e2e8f0}
+.btn-danger{background:#ef4444;color:#fff}
+.btn-danger:hover{background:#dc2626}
+.content-area{flex:1;overflow:hidden;display:flex}
+.wo-list-panel{width:380px;background:#fff;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;flex-shrink:0}
+.tabs{display:flex;border-bottom:1px solid #e2e8f0;padding:0 16px}
+.tab{padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;color:#64748b;border-bottom:2px solid transparent;transition:all .2s}
+.tab.active{color:#2563eb;border-bottom-color:#2563eb}
+.filter-bar{padding:12px 16px;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;flex-wrap:wrap}
+.filter-chip{padding:4px 10px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid #e2e8f0;background:#f8fafc;color:#475569;transition:all .2s}
+.filter-chip.active{background:#eff6ff;border-color:#2563eb;color:#2563eb}
+.wo-list{flex:1;overflow-y:auto}
+.wo-item{padding:16px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .15s}
+.wo-item:hover{background:#f8fafc}
+.wo-item.selected{background:#eff6ff;border-left:3px solid #2563eb}
+.wo-item-header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px}
+.wo-item-title{font-size:14px;font-weight:600;color:#1e293b}
+.badge{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-open{background:#dbeafe;color:#1d4ed8}
+  .badge-inprogress{background:#fef3c7;color:#92400e}
+  .badge-onhold{background:#f3e8ff;color:#6b21a8}
+  .badge-done{background:#dcfce7;color:#166534}
+  .badge-high{background:#fee2e2;color:#991b1b}
+  .badge-medium{background:#fef9c3;color:#713f12}
+  .badge-low{background:#dcfce7;color:#166534}
+  .wo-item-meta{font-size:12px;color:#94a3b8;display:flex;gap:12px}
+  .detail-panel{flex:1;overflow-y:auto;background:#f8fafc}
+  .detail-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#94a3b8;gap:12px}
+  .detail-empty-icon{font-size:48px}
+  .detail-header{background:#fff;padding:20px 24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;position:sticky;top:0;z-index:10}
+  .detail-title{font-size:20px;font-weight:700;color:#1e293b;margin-bottom:8px}
+  .detail-badges{display:flex;gap:8px;flex-wrap:wrap}
+  .detail-body{padding:24px;display:flex;flex-direction:column;gap:16px}
+  .card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden}
+  .card-header{padding:14px 16px;border-bottom:1px solid #f1f5f9;font-size:14px;font-weight:600;color:#475569;display:flex;justify-content:space-between;align-items:center}
+.card-body{padding:16px}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .info-field label{font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
+.info-field span{font-size:14px;color:#1e293b}
+  .parts-table{width:100%;border-collapse:collapse;font-size:13px}
+.parts-table th{text-align:left;padding:8px;background:#f8fafc;color:#64748b;font-weight:600;font-size:11px;text-transform:uppercase}
+  .parts-table td{padding:8px;border-top:1px solid #f1f5f9}
+.parts-total{padding:8px;text-align:right;font-weight:700;color:#1e293b;border-top:2px solid #e2e8f0}
+.comment-item{display:flex;gap:12px;margin-bottom:16px}
+  .comment-avatar{width:32px;height:32px;border-radius:50%;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.comment-body{flex:1}
+.comment-meta{font-size:12px;color:#94a3b8;margin-bottom:4px}
+.comment-text{font-size:14px;color:#1e293b;background:#f8fafc;padding:8px 12px;border-radius:8px}
+.comment-input-area{display:flex;gap:8px;margin-top:8px}
+.comment-input-area input{flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none}
+.comment-input-area input:focus{border-color:#2563eb}
+.activity-item{display:flex;gap:10px;margin-bottom:12px;align-items:flex-start}
+.activity-dot{width:8px;height:8px;border-radius:50%;background:#2563eb;margin-top:4px;flex-shrink:0}
+.activity-text{font-size:13px;color:#475569}
+.activity-time{font-size:11px;color:#94a3b8}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-header{padding:20px 24px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;z-index:1}
+.modal-title{font-size:18px;font-weight:700;color:#1e293b}
+.modal-close{background:none;border:none;font-size:24px;cursor:pointer;color:#94a3b8;line-height:1}
+.modal-close:hover{color:#1e293b}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:#fff}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;color:#1e293b;outline:none;font-family:inherit;background:#fff}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+.page{display:none}
+.page.active{display:block}
+.coming-soon{padding:60px 24px;text-align:center;color:#94a3b8}
+.coming-soon-icon{font-size:64px;margin-bottom:16px}
+.coming-soon h2{font-size:24px;font-weight:700;color:#475569;margin-bottom:8px}
+.print-btn{padding:6px 12px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:13px;color:#475569}
+.print-btn:hover{background:#e2e8f0}
+@media(max-width:768px){
+.sidebar{display:none}
+.app-layout{flex-direction:column}
+.content-area{flex-direction:column}
+.wo-list-panel{width:100%;height:calc(100vh - 56px - 60px);flex-shrink:0}
+.detail-panel{position:fixed;inset:0;z-index:100;background:#f8fafc;transform:translateX(100%);transition:transform .3s ease}
+.detail-panel.open{transform:translateX(0)}
+.mobile-header{display:flex!important}
+.main-content{padding-bottom:56px}
+.top-bar h1{font-size:16px}
+.info-grid{grid-template-columns:1fr}
+.form-grid{grid-template-columns:1fr}
+.mobile-nav{display:flex!important}
+}
+.mobile-header{display:none;background:#001e40;color:#fff;padding:12px 16px;align-items:center;gap:12px}
+.mobile-back{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:4px}
+.mobile-title{font-size:16px;font-weight:700;flex:1}
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:#001e40;height:56px;z-index:200;align-items:stretch}
+.mobile-nav-btn{flex:1;background:none;border:none;color:rgba(255,255,255,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;font-size:10px;padding:4px}
+.mobile-nav-btn.active{color:#fff;background:rgba(255,255,255,.1)}
+.mobile-nav-icon{font-size:18px}
+.no-print{} 
+@media print{.sidebar,.top-bar,.modal-overlay,.toast,.mobile-nav,.no-print{display:none!important}.detail-panel{position:static!important;transform:none!important}.app-layout{display:block}.main-content{overflow:visible}.card{break-inside:avoid}}
+</style>
+</head>
+<body>
+  <div id="login-screen">
+  <div class="login-box">
+  <div class="login-logo">WorkOrder Pro</div>
+<div class="login-sub">Maintenance Management System</div>
+  <div class="login-title">Who are you?</div>
+<button class="user-btn" onclick="login('Bill','Administrator')">Bill<span class="role">Administrator</span></button>
+  <button class="user-btn" onclick="login('Serina','Team Member')">Serina<span class="role">Team Member</span></button>
+  </div>
+  </div>
+
+  <div id="app">
+<div class="app-layout">
+  <div class="sidebar">
+  <div class="sidebar-logo">WorkOrder<span>Pro</span></div>
+  <div class="nav-section">Operations</div>
+<div class="nav-item active" onclick="showPage('workorders',this)"><span class="nav-icon">📋</span>Work Orders</div>
+  <div class="nav-item" onclick="showPage('assets',this)"><span class="nav-icon">🔧</span>Assets</div>
+  <div class="nav-item" onclick="showPage('team',this)"><span class="nav-icon">👥</span>Team</div>
+  <div class="nav-item" onclick="showPage('inventory',this)"><span class="nav-icon">📦</span>Inventory</div>
+  <div class="nav-item" onclick="showPage('reports',this)"><span class="nav-icon">📊</span>Reports</div>
+  <div class="user-info">
+  <div class="user-avatar" id="sidebar-avatar">B</div>
+  <div><div class="user-name" id="sidebar-name">Bill</div><div class="user-role" id="sidebar-role">Administrator</div></div>
+  <button class="logout-btn" onclick="logout()" title="Logout">⏻</button>
+  </div>
+  </div>
+  <div class="main-content">
+  <div class="mobile-header">
+  <div class="mobile-title">WorkOrder Pro</div>
+  <button class="btn btn-primary" onclick="openModal()" style="padding:6px 12px;font-size:13px">+ New</button>
+  </div>
+  <div class="top-bar no-print">
+  <h1>Work Orders</h1>
+  <div class="search-box"><span>🔍</span><input type="text" id="search-input" placeholder="Search work orders..." oninput="renderList()"></div>
+  <div style="display:flex;gap:8px">
+  <button class="btn btn-secondary" onclick="exportData()" title="Export JSON">⬇ Export</button>
+  <label class="btn btn-secondary" style="cursor:pointer" title="Import JSON">⬆ Import<input type="file" accept=".json" onchange="importData(event)" style="display:none"></label>
+  <button class="btn btn-primary" onclick="openModal()">+ New Work Order</button>
+  </div>
+  </div>
+  <div class="content-area">
+  <div class="wo-list-panel">
+  <div class="tabs">
+  <div class="tab active" onclick="setTab('open',this)">To Do</div>
+  <div class="tab" onclick="setTab('done',this)">Done</div>
+  <div class="tab" onclick="setTab('all',this)">All</div>
+  </div>
+  <div class="filter-bar">
+  <span class="filter-chip active" onclick="setFilter('All',this)">All</span>
+  <span class="filter-chip" onclick="setFilter('High',this)">🔴 High</span>
+  <span class="filter-chip" onclick="setFilter('Medium',this)">🟡 Medium</span>
+  <span class="filter-chip" onclick="setFilter('Low',this)">🟢 Low</span>
+  </div>
+  <div class="wo-list" id="wo-list"></div>
+  </div>
+  <div class="detail-panel" id="detail-panel">
+  <div class="mobile-header">
+  <button class="mobile-back" onclick="closeDetail()">←</button>
+  <div class="mobile-title" id="mobile-detail-title">Work Order</div>
+  <button class="print-btn no-print" onclick="window.print()">🖨 Print</button>
+  </div>
+  <div id="detail-content">
+  <div class="detail-empty" style="height:100%;display:flex">
+  <div class="detail-empty-icon">📋</div>
+  <div>Select a work order to view details</div>
+  </div>
+  </div>
+  </div>
+  </div>
+  </div>
+  </div>
+  </div>
+<div class="mobile-nav">
+  <button class="mobile-nav-btn active" onclick="showPage('workorders',this)"><span class="mobile-nav-icon">📋</span>Work Orders</button>
+  <button class="mobile-nav-btn" onclick="showPage('assets',this)"><span class="mobile-nav-icon">🔧</span>Assets</button>
+  <button class="mobile-nav-btn" onclick="showPage('team',this)"><span class="mobile-nav-icon">👥</span>Team</button>
+  <button class="mobile-nav-btn" onclick="showPage('inventory',this)"><span class="mobile-nav-icon">📦</span>Inventory</button>
+  <button class="mobile-nav-btn" onclick="showPage('reports',this)"><span class="mobile-nav-icon">📊</span>Reports</button>
+  </div>
+  </div>
+
+  <div id="modal-overlay" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+  <div class="modal-header">
+  <div class="modal-title" id="modal-title">New Work Order</div>
+  <button class="modal-close" onclick="closeModal()">×</button>
+  </div>
+  <div class="modal-body">
+  <div class="form-group"><label>Title *</label><input type="text" id="f-title" placeholder="Brief description of work"></div>
+<div class="form-group"><label>Description</label><textarea id="f-desc" rows="3" placeholder="Detailed description..."></textarea></div>
+  <div class="form-grid">
+  <div class="form-group"><label>Status</label><select id="f-status"><option>Open</option><option>In Progress</option><option>On Hold</option><option>Done</option></select></div>
+  <div class="form-group"><label>Priority</label><select id="f-priority"><option>High</option><option>Medium</option><option>Low</option><option>None</option></select></div>
+  </div>
+<div class="form-grid">
+  <div class="form-group"><label>Asset</label><input type="text" id="f-asset" placeholder="Equipment/Asset name"></div>
+<div class="form-group"><label>Location</label><input type="text" id="f-location" placeholder="Where is this?"></div>
+  </div>
+  <div class="form-grid">
+  <div class="form-group"><label>Work Type</label><select id="f-worktype"><option>Preventive</option><option>Corrective</option><option>Inspection</option><option>Emergency</option><option>Other</option></select></div>
+  <div class="form-group"><label>Assigned To</label><select id="f-assigned"><option>Bill</option><option>Serina</option><option>Unassigned</option></select></div>
+  </div>
+<div class="form-group"><label>Estimated Time (hours)</label><input type="number" id="f-time" placeholder="e.g. 2.5" step="0.5" min="0"></div>
+  <div class="form-group">
+  <label>Parts / Materials</label>
+  <div id="parts-list"></div>
+  <button class="btn btn-secondary" onclick="addPartRow()" style="width:100%;margin-top:8px">+ Add Part</button>
+  </div>
+  </div>
+  <div class="modal-footer">
+  <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+  <button class="btn btn-primary" onclick="saveWO()">Save Work Order</button>
+  </div>
+  </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+  const API = window.location.origin;
+  let workorders = [];
+  let currentTab = 'open';
+let currentFilter = 'All';
+let selectedId = null;
+let editingId = null;
+let currentUser = null;
+
+function login(name, role) {
+    currentUser = { name, role };
+  localStorage.setItem('wo_user', JSON.stringify(currentUser));
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('sidebar-avatar').textContent = name[0];
+  document.getElementById('sidebar-name').textContent = name;
+  document.getElementById('sidebar-role').textContent = role;
+  loadWorkorders();
+}
+
+function logout() {
+    localStorage.removeItem('wo_user');
+  currentUser = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+async function loadWorkorders() {
+  try {
+    const r = await fetch(API + '/api/workorders');
+    workorders = await r.json();
+    renderList();
+    if (selectedId) renderDetail(selectedId);
+  } catch(e) { showToast('Error loading work orders'); }
+}
+
+function setTab(tab, el) {
+    currentTab = tab;
+  document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  selectedId = null;
+  renderList();
+  renderDetail(null);
+}
+
+function setFilter(f, el) {
+    currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderList();
+}
+
+function getFiltered() {
+  const q = (document.getElementById('search-input').value || '').toLowerCase();
+  return workorders.filter(w => {
+    const matchTab = currentTab === 'all' ? true : currentTab === 'done' ? w.status === 'Done' : w.status !== 'Done';
+    const matchFilter = currentFilter === 'All' ? true : w.priority === currentFilter;
+    const matchSearch = !q || w.title.toLowerCase().includes(q) || (w.asset||'').toLowerCase().includes(q) || (w.location||'').toLowerCase().includes(q);
+    return matchTab && matchFilter && matchSearch;
+});
+}
+
+function statusBadge(s) {
+  const map = {Open:'badge-open','In Progress':'badge-inprogress','On Hold':'badge-onhold',Done:'badge-done'};
+  return `<span class="badge ${map[s]||'badge-open'}">${s}</span>`;
+}
+
+function priorityBadge(p) {
+  const map = {High:'badge-high',Medium:'badge-medium',Low:'badge-low'};
+  return p && p !== 'None' ? `<span class="badge ${map[p]||''}">${p}</span>` : '';
+}
+
+function renderList() {
+  const list = getFiltered();
+  const el = document.getElementById('wo-list');
+  if (!list.length) {
+    el.innerHTML = '<div style="padding:32px;text-align:center;color:#94a3b8">No work orders found</div>';
+    return;
+}
+  el.innerHTML = list.map(w => `
+    <div class="wo-item${selectedId===w.id?' selected':''}" onclick="selectWO(${w.id})">
+      <div class="wo-item-header">
+        <div class="wo-item-title">${esc(w.title)}</div>
+        ${statusBadge(w.status)}
+      </div>
+      <div style="margin-bottom:6px">${priorityBadge(w.priority)}</div>
+      <div class="wo-item-meta">
+        <span>👤 ${esc(w.assignedTo||'Unassigned')}</span>
+        ${w.asset?`<span>🔧 ${esc(w.asset)}</span>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function selectWO(id) {
+  selectedId = id;
+  renderList();
+  renderDetail(id);
+  const dp = document.getElementById('detail-panel');
+  dp.classList.add('open');
+  document.getElementById('mobile-detail-title').textContent = workorders.find(w=>w.id===id)?.title||'Work Order';
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('open');
+  selectedId = null;
+  renderList();
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderDetail(id) {
+  const dc = document.getElementById('detail-content');
+  if (!id) {
+    dc.innerHTML = '<div class="detail-empty" style="height:100%;display:flex"><div class="detail-empty-icon">📋</div><div>Select a work order to view details</div></div>';
+    return;
+}
+  const w = workorders.find(x => x.id === id);
+  if (!w) return;
+  const parts = w.parts || [];
+  const totalCost = parts.reduce((s, p) => s + (parseFloat(p.cost)||0)*(parseInt(p.qty)||1), 0);
+  const comments = w.comments || [];
+  const activity = w.activity || [];
+  dc.innerHTML = `
+        <div class="detail-header no-print">
+          <div>
+            <div class="detail-title">${esc(w.title)}</div>
+        <div class="detail-badges">${statusBadge(w.status)} ${priorityBadge(w.priority)}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button class="print-btn" onclick="window.print()">🖨 Print</button>
+        <button class="btn btn-secondary" onclick="openModal(${w.id})">✏️ Edit</button>
+        <button class="btn btn-danger" onclick="deleteWO(${w.id})">🗑</button>
+      </div>
+    </div>
+    <div class="detail-body">
+      <div class="card">
+        <div class="card-header">Details</div>
+        <div class="card-body">
+          ${w.description?`<p style="margin-bottom:16px;color:#475569;font-size:14px">${esc(w.description)}</p>`:''}
+          <div class="info-grid">
+            <div class="info-field"><label>Assigned To</label><span>${esc(w.assignedTo||'Unassigned')}</span></div>
+            <div class="info-field"><label>Work Type</label><span>${esc(w.workType||'-')}</span></div>
+            <div class="info-field"><label>Asset</label><span>${esc(w.asset||'-')}</span></div>
+            <div class="info-field"><label>Location</label><span>${esc(w.location||'-')}</span></div>
+            <div class="info-field"><label>Est. Time</label><span>${w.estimatedTime?w.estimatedTime+' hrs':'-'}</span></div>
+            <div class="info-field"><label>Created</label><span>${new Date(w.createdAt).toLocaleDateString()}</span></div>
+          </div>
+        </div>
+      </div>
+      ${parts.length?`
+      <div class="card">
+        <div class="card-header">Parts & Materials</div>
+        <div class="card-body" style="padding:0">
+          <table class="parts-table">
+            <thead><tr><th>Part</th><th>Qty</th><th>Unit Cost</th><th>Total</th></tr></thead>
+            <tbody>${parts.map(p=>`<tr><td>${esc(p.name)}</td><td>${p.qty||1}</td><td>$${parseFloat(p.cost||0).toFixed(2)}</td><td>$${((parseFloat(p.cost)||0)*(parseInt(p.qty)||1)).toFixed(2)}</td></tr>`).join('')}</tbody>
+          </table>
+          <div class="parts-total">Total Cost: $${totalCost.toFixed(2)}</div>
+        </div>
+      </div>`:''}
+      <div class="card no-print">
+        <div class="card-header">Comments</div>
+        <div class="card-body">
+          ${comments.map(c=>`<div class="comment-item"><div class="comment-avatar">${c.user?c.user[0]:'?'}</div><div class="comment-body"><div class="comment-meta">${esc(c.user)} · ${new Date(c.time).toLocaleString()}</div><div class="comment-text">${esc(c.text)}</div></div></div>`).join('')}
+          <div class="comment-input-area">
+            <input type="text" id="comment-input" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')addComment(${w.id})">
+            <button class="btn btn-primary" onclick="addComment(${w.id})">Post</button>
+          </div>
+        </div>
+      </div>
+      <div class="card no-print">
+        <div class="card-header">Activity</div>
+        <div class="card-body">
+          ${activity.slice().reverse().map(a=>`<div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">${esc(a.action)}</div><div class="activity-time">${esc(a.user)} · ${new Date(a.time).toLocaleString()}</div></div></div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+async function addComment(id) {
+  const input = document.getElementById('comment-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const w = workorders.find(x => x.id === id);
+  if (!w) return;
+  w.comments = w.comments || [];
+  w.comments.push({ user: currentUser.name, text, time: new Date().toISOString() });
+  w.activity = w.activity || [];
+  w.activity.push({ user: currentUser.name, action: 'Added a comment', time: new Date().toISOString() });
+  await fetch(API + '/api/workorders/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(w) });
+  input.value = '';
+      renderDetail(id);
+  }
+
+async function deleteWO(id) {
+  if (!confirm('Delete this work order?')) return;
+  await fetch(API + '/api/workorders/' + id, { method: 'DELETE' });
+  selectedId = null;
+  await loadWorkorders();
+  renderDetail(null);
+  document.getElementById('detail-panel').classList.remove('open');
+  showToast('Work order deleted');
+}
+
+let partsData = [];
+
+function openModal(id) {
+    editingId = id || null;
+  partsData = [];
+  document.getElementById('modal-title').textContent = id ? 'Edit Work Order' : 'New Work Order';
+  if (id) {
+    const w = workorders.find(x => x.id === id);
+    if (!w) return;
+    document.getElementById('f-title').value = w.title || '';
+          document.getElementById('f-desc').value = w.description || '';
+          document.getElementById('f-status').value = w.status || 'Open';
+    document.getElementById('f-priority').value = w.priority || 'Medium';
+    document.getElementById('f-asset').value = w.asset || '';
+          document.getElementById('f-location').value = w.location || '';
+          document.getElementById('f-worktype').value = w.workType || 'Preventive';
+    document.getElementById('f-assigned').value = w.assignedTo || 'Bill';
+    document.getElementById('f-time').value = w.estimatedTime || '';
+          partsData = (w.parts || []).map(p => ({...p}));
+  } else {
+    document.getElementById('f-title').value = '';
+          document.getElementById('f-desc').value = '';
+    document.getElementById('f-status').value = 'Open';
+    document.getElementById('f-priority').value = 'Medium';
+    document.getElementById('f-asset').value = '';
+          document.getElementById('f-location').value = '';
+          document.getElementById('f-worktype').value = 'Preventive';
+    document.getElementById('f-assigned').value = currentUser ? currentUser.name : 'Bill';
+    document.getElementById('f-time').value = '';
+      }
+  renderPartsForm();
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('modal-overlay').style.display = 'none';
+}
+
+function addPartRow() {
+    partsData.push({ name: '', qty: 1, cost: 0 });
+  renderPartsForm();
+}
+
+function renderPartsForm() {
+    const el = document.getElementById('parts-list');
+  el.innerHTML = partsData.map((p, i) => `
+        <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+      <input type="text" value="${esc(p.name)}" placeholder="Part name" style="flex:2;padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px" oninput="partsData[${i}].name=this.value">
+          <input type="number" value="${p.qty||1}" min="1" placeholder="Qty" style="flex:.5;padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px" oninput="partsData[${i}].qty=this.value">
+          <input type="number" value="${p.cost||0}" min="0" step="0.01" placeholder="$" style="flex:.7;padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px" oninput="partsData[${i}].cost=this.value">
+      <button onclick="partsData.splice(${i},1);renderPartsForm()" style="background:#fee2e2;border:none;border-radius:6px;padding:8px;cursor:pointer;color:#991b1b">✕</button>
+        </div>`).join('');
+    }
+
+    async function saveWO() {
+      const title = document.getElementById('f-title').value.trim();
+  if (!title) { showToast('Please enter a title'); return; }
+  const data = {
+    title,
+          description: document.getElementById('f-desc').value,
+          status: document.getElementById('f-status').value,
+          priority: document.getElementById('f-priority').value,
+          asset: document.getElementById('f-asset').value,
+          location: document.getElementById('f-location').value,
+          workType: document.getElementById('f-worktype').value,
+    assignedTo: document.getElementById('f-assigned').value,
+    estimatedTime: document.getElementById('f-time').value,
+          parts: partsData
+      };
+  if (editingId) {
+    const w = workorders.find(x => x.id === editingId);
+    if (w) {
+      w.activity = w.activity || [];
+      w.activity.push({ user: currentUser.name, action: 'Work order updated', time: new Date().toISOString() });
+      data.activity = w.activity;
+      data.comments = w.comments;
+  }
+    await fetch(API + '/api/workorders/' + editingId, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    showToast('Work order updated');
+} else {
+    const res = await fetch(API + '/api/workorders', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    const newWO = await res.json();
+    selectedId = newWO.id;
+    showToast('Work order created');
+}
+  closeModal();
+  await loadWorkorders();
+  if (selectedId) renderDetail(selectedId);
+}
+
+function showPage(page, el) {
+  if (page !== 'workorders') {
+    showToast('Coming soon!');
+    return;
+}
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.mobile-nav-btn').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+
+function exportData() {
+  fetch(API + '/api/export').then(r => r.json()).then(data => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'workorders-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    showToast('Exported successfully');
+});
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      await fetch(API + '/api/import', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+      await loadWorkorders();
+      showToast('Imported ' + (data.workorders||[]).length + ' work orders');
+} catch { showToast('Invalid file format'); }
+};
+  reader.readAsText(file);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Auto-login from localStorage
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('wo_user');
+  if (saved) {
+    try {
+      const u = JSON.parse(saved);
+      login(u.name, u.role);
+} catch { localStorage.removeItem('wo_user'); }
+}
+});
+</script>
+</body>
+</html>
