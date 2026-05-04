@@ -741,7 +741,7 @@
   </div>
 </aside>
 <!-- ===== PART 2A END ===== -->
-<!-- ===== PART A START ===== -->
+<!-- ===== PART A2 START ===== -->
 <script>
 (() => {
   // ===== Auth (client-side only, demo) =====
@@ -773,6 +773,7 @@
     workorders: [],
     procedures: [],
     activeWO: null,
+    editingWoId: null,     // null = new; id = editing existing
     editingProc: null,
     pbFields: [],
   };
@@ -799,25 +800,33 @@
   const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const fmtDate = (iso) => { if (!iso) return ''; try { return new Date(iso).toLocaleString(); } catch { return iso; } };
 
-  // ===== Modals & lightbox =====
-  function openModal(id) { const m = document.getElementById(id); if (m) m.classList.add('open'); }
-  function closeModal(id) { const m = document.getElementById(id); if (m) m.classList.remove('open'); }
+  // ===== Modal helpers (.modal-backdrop + .show) =====
+  function openModal(id) { const m = document.getElementById(id); if (m) m.classList.add('show'); }
+  function closeModal(id) { const m = document.getElementById(id); if (m) m.classList.remove('show'); }
+  // Click-outside and data-close handlers
   document.addEventListener('click', (e) => {
-    if (e.target.classList && e.target.classList.contains('modal')) e.target.classList.remove('open');
-    if (e.target.dataset && e.target.dataset.close) closeModal(e.target.dataset.close);
+    // Click directly on backdrop closes
+    if (e.target.classList && e.target.classList.contains('modal-backdrop')) {
+      e.target.classList.remove('show');
+    }
+    // data-close="MODAL_ID" buttons
+    const closeId = e.target.getAttribute && e.target.getAttribute('data-close');
+    if (closeId) closeModal(closeId);
   });
+
+  // ===== Lightbox =====
   function openLightbox(src) {
     const lb = $('#lightbox');
+    if (!lb) return;
     $('#lightbox-img').src = src;
-    lb.classList.add('open');
+    lb.classList.add('show');
   }
-  $('#lightbox').addEventListener('click', () => $('#lightbox').classList.remove('open'));
+  if ($('#lightbox')) $('#lightbox').addEventListener('click', () => $('#lightbox').classList.remove('show'));
 
-  // ===== Login =====
-  $('#login-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const u = $('#login-username').value.trim().toLowerCase();
-    const p = $('#login-password').value;
+  // ===== Login (button click) =====
+  function attemptLogin() {
+    const u = $('#login-user').value.trim().toLowerCase();
+    const p = $('#login-pass').value;
     if (USERS[u] && USERS[u] === p) {
       setCurrentUser(u);
       $('#login-error').textContent = '';
@@ -825,39 +834,51 @@
     } else {
       $('#login-error').textContent = 'Invalid username or password';
     }
+  }
+  $('#login-btn').addEventListener('click', (e) => { e.preventDefault(); attemptLogin(); });
+  // Allow Enter key in either input to submit
+  ['#login-user', '#login-pass'].forEach(sel => {
+    $(sel).addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); attemptLogin(); }
+    });
   });
-  $('#logout-btn').addEventListener('click', () => {
-    clearCurrentUser();
-    showLogin();
-  });
+  $('#logout-btn').addEventListener('click', () => { clearCurrentUser(); showLogin(); });
 
   function showLogin() {
     $('#login-screen').style.display = 'flex';
     $('#app').style.display = 'none';
-    $('#login-username').value = '';
-    $('#login-password').value = '';
+    $('#login-user').value = '';
+    $('#login-pass').value = '';
   }
   function showApp() {
     $('#login-screen').style.display = 'none';
-    $('#app').style.display = 'flex';
+    $('#app').style.display = '';
     $('#current-user').textContent = getCurrentUser();
     setView(state.view);
     refreshAll();
   }
 
-  // ===== View switching =====
-  $$('.nav-btn').forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.view)));
+  // ===== View switching (.nav-item[data-view]) =====
+  $$('.nav-item').forEach(n => n.addEventListener('click', () => {
+    const v = n.dataset.view;
+    if (v) setView(v);
+  }));
   function setView(v) {
     state.view = v;
-    $$('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
-    $('#view-workorders').style.display = v === 'workorders' ? 'block' : 'none';
-    $('#view-procedures').style.display = v === 'procedures' ? 'block' : 'none';
+    $$('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === v));
+    $('#view-workorders').style.display = v === 'workorders' ? '' : 'none';
+    $('#view-procedures').style.display = v === 'procedures' ? '' : 'none';
     if (v === 'workorders') renderWorkOrders();
     else renderProcedures();
+    // Close mobile sidebar after navigation
+    $('#sidebar').classList.remove('open');
   }
 
-  // Mobile menu
-  $('#menu-toggle').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+  // Mobile menu (two buttons)
+  ['#menu-btn', '#menu-btn-2'].forEach(sel => {
+    const b = $(sel);
+    if (b) b.addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+  });
 
   async function refreshAll() {
     try {
@@ -879,21 +900,21 @@
   }
   // Expose for chat panel auto-refresh
   window.__wopro_refresh = refreshAll;
-<!-- ===== PART A END ===== -->
-<!-- ===== PART B START ===== -->
+<!-- ===== PART A2 END ===== -->
+<!-- ===== PART B2 START ===== -->
   // ===== Work Orders list =====
   function renderWorkOrders() {
     const list = $('#wo-list');
     list.innerHTML = '';
     if (!state.workorders.length) {
-      list.appendChild(el('div', { class: 'empty' }, 'No work orders yet. Click "New Work Order" to create one.'));
+      list.appendChild(el('div', { class: 'empty' }, 'No work orders yet. Click "+ New Work Order" to create one.'));
       return;
     }
     state.workorders.forEach(w => {
       const card = el('div', { class: 'card wo-card', onclick: () => openWorkOrder(w.id) },
         el('div', { class: 'wo-card-header' },
           el('div', { class: 'wo-title' }, w.title || '(untitled)'),
-          el('span', { class: `pill priority-${w.priority || 'normal'}` }, w.priority || 'normal'),
+          el('span', { class: `pill priority-${w.priority || 'medium'}` }, w.priority || 'medium'),
         ),
         el('div', { class: 'wo-meta' },
           el('span', {}, `Status: ${w.status || 'open'}`),
@@ -906,34 +927,99 @@
     });
   }
 
-  $('#new-wo-btn').addEventListener('click', () => {
-    $('#wo-form-title').textContent = 'New Work Order';
-    $('#wo-form').reset();
-    $('#wo-form-id').value = '';
-    openModal('modal-wo-form');
-  });
+  // ===== WO form (no <form>, button-driven) =====
+  function openWoForm(wo) {
+    state.editingWoId = wo ? wo.id : null;
+    $('#wo-form-title').textContent = wo ? 'Edit Work Order' : 'New Work Order';
+    $('#wof-title').value = wo ? (wo.title || '') : '';
+    $('#wof-desc').value = wo ? (wo.description || '') : '';
+    $('#wof-status').value = wo ? (wo.status || 'open') : 'open';
+    $('#wof-priority').value = wo ? (wo.priority || 'medium') : 'medium';
+    $('#wof-assignee').value = wo ? (wo.assignee || '') : '';
+    openModal('wo-form-modal');
+    setTimeout(() => $('#wof-title').focus(), 50);
+  }
 
-  $('#wo-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const id = $('#wo-form-id').value;
+  $('#new-wo-btn').addEventListener('click', () => openWoForm(null));
+
+  $('#wof-save').addEventListener('click', async () => {
     const payload = {
-      title: $('#wo-title').value.trim(),
-      description: $('#wo-description').value.trim(),
-      priority: $('#wo-priority').value,
-      status: $('#wo-status').value,
-      assignee: $('#wo-assignee').value.trim(),
+      title: $('#wof-title').value.trim(),
+      description: $('#wof-desc').value.trim(),
+      status: $('#wof-status').value,
+      priority: $('#wof-priority').value,
+      assignee: $('#wof-assignee').value.trim(),
     };
+    if (!payload.title) { alert('Title is required'); return; }
     try {
-      if (id) {
-        await apiFetch(`/api/workorders/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      if (state.editingWoId) {
+        await apiFetch(`/api/workorders/${state.editingWoId}`, { method: 'PUT', body: JSON.stringify(payload) });
       } else {
         await apiFetch('/api/workorders', { method: 'POST', body: JSON.stringify(payload) });
       }
-      closeModal('modal-wo-form');
+      closeModal('wo-form-modal');
+      state.editingWoId = null;
       await refreshAll();
     } catch (err) {
       alert('Save failed: ' + err.message);
     }
+  });
+
+  // ===== WO detail =====
+  async function openWorkOrder(id) {
+    try {
+      const wo = await apiFetch(`/api/workorders/${id}`);
+      state.activeWO = wo;
+      renderWorkOrderDetail();
+      openModal('wo-detail-modal');
+    } catch (e) { alert('Open failed: ' + e.message); }
+  }
+
+  function renderWorkOrderDetail() {
+    const wo = state.activeWO;
+    if (!wo) return;
+    $('#wod-title').textContent = wo.title || '(untitled)';
+    const body = $('#wod-body');
+    body.innerHTML = '';
+    body.appendChild(el('div', { class: 'wo-meta' },
+      el('span', { class: `pill priority-${wo.priority || 'medium'}` }, wo.priority || 'medium'),
+      el('span', {}, `Status: ${wo.status || 'open'}`),
+      el('span', {}, `Assignee: ${wo.assignee || '—'}`),
+      el('span', {}, `Created: ${fmtDate(wo.createdAt)}`),
+    ));
+    if (wo.description) body.appendChild(el('p', { class: 'wo-desc' }, wo.description));
+
+    body.appendChild(el('div', { class: 'detail-actions' },
+      el('button', { class: 'btn btn-secondary btn-sm', onclick: () => openAttachModal(wo.id) }, '+ Attach Procedure'),
+    ));
+
+    const procWrap = el('div', { class: 'attached-procs' });
+    body.appendChild(procWrap);
+    const attached = wo.procedures || [];
+    if (!attached.length) {
+      procWrap.appendChild(el('div', { class: 'empty' }, 'No procedures attached.'));
+    } else {
+      attached.forEach(inst => procWrap.appendChild(renderProcedureInstance(wo, inst)));
+    }
+  }
+
+  // Footer Edit / Delete buttons (wired once, read state.activeWO each click)
+  $('#wod-edit').addEventListener('click', () => {
+    if (!state.activeWO) return;
+    const wo = state.activeWO;
+    closeModal('wo-detail-modal');
+    openWoForm(wo);
+  });
+  $('#wod-delete').addEventListener('click', async () => {
+    if (!state.activeWO) return;
+    const wo = state.activeWO;
+    if (!confirm(`Delete work order "${wo.title}"?`)) return;
+    try {
+      await apiFetch(`/api/workorders/${wo.id}`, { method: 'DELETE' });
+      state.activeWO = null;
+      closeModal('wo-detail-modal');
+      await refreshAll();
+    } catch (err) { alert('Delete failed: ' + err.message); }
   });
 
   // ===== Procedures list =====
@@ -941,7 +1027,7 @@
     const list = $('#proc-list');
     list.innerHTML = '';
     if (!state.procedures.length) {
-      list.appendChild(el('div', { class: 'empty' }, 'No procedures yet. Click "New Procedure" to build one.'));
+      list.appendChild(el('div', { class: 'empty' }, 'No procedures yet. Click "+ New Procedure" to build one.'));
       return;
     }
     state.procedures.forEach(p => {
@@ -952,8 +1038,9 @@
         ),
         p.description ? el('div', { class: 'proc-desc' }, p.description) : null,
         el('div', { class: 'card-actions' },
-          el('button', { class: 'btn btn-ghost', onclick: () => openProcedureBuilder(p) }, 'Edit'),
-          el('button', { class: 'btn btn-danger', onclick: async () => {
+          el('button', { class: 'btn btn-secondary btn-sm', onclick: (ev) => { ev.stopPropagation(); openProcedureBuilder(p); } }, 'Edit'),
+          el('button', { class: 'btn btn-danger btn-sm', onclick: async (ev) => {
+            ev.stopPropagation();
             if (!confirm(`Delete procedure "${p.name}"? This cannot be undone.`)) return;
             try { await apiFetch(`/api/procedures/${p.id}`, { method: 'DELETE' }); await refreshAll(); }
             catch (err) { alert('Delete failed: ' + err.message); }
@@ -1032,73 +1119,16 @@
       }
     };
   }
-
-  // ===== WO detail =====
-  async function openWorkOrder(id) {
-    try {
-      const wo = await apiFetch(`/api/workorders/${id}`);
-      state.activeWO = wo;
-      renderWorkOrderDetail();
-      openModal('modal-wo-detail');
-    } catch (e) { alert('Open failed: ' + e.message); }
-  }
-
-  function renderWorkOrderDetail() {
-    const wo = state.activeWO;
-    if (!wo) return;
-    $('#wo-detail-title').textContent = wo.title || '(untitled)';
-    const body = $('#wo-detail-body');
-    body.innerHTML = '';
-    body.appendChild(el('div', { class: 'wo-meta' },
-      el('span', { class: `pill priority-${wo.priority || 'normal'}` }, wo.priority || 'normal'),
-      el('span', {}, `Status: ${wo.status || 'open'}`),
-      el('span', {}, `Assignee: ${wo.assignee || '—'}`),
-      el('span', {}, `Created: ${fmtDate(wo.createdAt)}`),
-    ));
-    if (wo.description) body.appendChild(el('p', { class: 'wo-desc' }, wo.description));
-
-    body.appendChild(el('div', { class: 'detail-actions' },
-      el('button', { class: 'btn btn-ghost', onclick: () => {
-        $('#wo-form-title').textContent = 'Edit Work Order';
-        $('#wo-form-id').value = wo.id;
-        $('#wo-title').value = wo.title || '';
-        $('#wo-description').value = wo.description || '';
-        $('#wo-priority').value = wo.priority || 'normal';
-        $('#wo-status').value = wo.status || 'open';
-        $('#wo-assignee').value = wo.assignee || '';
-        closeModal('modal-wo-detail');
-        openModal('modal-wo-form');
-      }}, 'Edit'),
-      el('button', { class: 'btn btn-danger', onclick: async () => {
-        if (!confirm(`Delete work order "${wo.title}"?`)) return;
-        try {
-          await apiFetch(`/api/workorders/${wo.id}`, { method: 'DELETE' });
-          state.activeWO = null;
-          closeModal('modal-wo-detail');
-          await refreshAll();
-        } catch (err) { alert('Delete failed: ' + err.message); }
-      }}, 'Delete'),
-      el('button', { class: 'btn btn-primary', onclick: () => openAttachModal(wo.id) }, '+ Attach Procedure'),
-    ));
-
-    const procWrap = el('div', { class: 'attached-procs' });
-    body.appendChild(procWrap);
-    const attached = wo.procedures || [];
-    if (!attached.length) {
-      procWrap.appendChild(el('div', { class: 'empty' }, 'No procedures attached.'));
-    } else {
-      attached.forEach(inst => procWrap.appendChild(renderProcedureInstance(wo, inst)));
-    }
-  }
-<!-- ===== PART B END ===== -->
-<!-- ===== PART C START ===== -->
+<!-- ===== PART B2 END ===== -->
+<!-- ===== PART C2 START ===== -->
+  // ===== Procedure instance renderer =====
   function renderProcedureInstance(wo, inst) {
     const proc = state.procedures.find(p => p.id === inst.procedureId);
     const wrap = el('div', { class: 'proc-instance card' });
     wrap.appendChild(el('div', { class: 'proc-instance-header' },
       el('div', { class: 'proc-title' }, proc ? proc.name : '(deleted procedure)'),
       el('div', { class: 'proc-instance-actions' },
-        el('button', { class: 'btn btn-ghost btn-sm', onclick: async () => {
+        el('button', { class: 'btn btn-secondary btn-sm', onclick: async () => {
           try { await apiFetch(`/api/workorders/${wo.id}/procedures/${inst.id}/complete`, { method: 'POST' }); await refreshAll(); }
           catch (e) { alert('Mark complete failed: ' + e.message); }
         }}, inst.completedAt ? `✓ Completed ${fmtDate(inst.completedAt)}` : 'Mark Complete'),
@@ -1123,12 +1153,12 @@
         cb.addEventListener('change', () => save(cb.checked));
         row.appendChild(cb);
       } else if (f.type === 'text') {
-        const inp = el('input', { type: 'text', class: 'input' });
+        const inp = el('input', { type: 'text' });
         inp.value = current || '';
         inp.addEventListener('input', () => save(inp.value));
         row.appendChild(inp);
       } else if (f.type === 'number') {
-        const inp = el('input', { type: 'number', class: 'input' });
+        const inp = el('input', { type: 'number' });
         if (current != null) inp.value = current;
         inp.addEventListener('input', () => save(inp.value === '' ? null : Number(inp.value)));
         row.appendChild(inp);
@@ -1144,7 +1174,7 @@
         });
         row.appendChild(group);
       } else if (f.type === 'date') {
-        const inp = el('input', { type: 'date', class: 'input' });
+        const inp = el('input', { type: 'date' });
         inp.value = current || '';
         inp.addEventListener('input', () => save(inp.value || null));
         row.appendChild(inp);
@@ -1153,7 +1183,7 @@
         const pad = makeSignaturePad(canvas);
         if (current) pad.load(current);
         canvas.addEventListener('sig-change', (e) => save(e.detail));
-        const clearBtn = el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => pad.clear() }, 'Clear');
+        const clearBtn = el('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: () => pad.clear() }, 'Clear');
         row.appendChild(el('div', { class: 'sig-wrap' }, canvas, clearBtn));
       } else if (f.type === 'photo') {
         const wrapPhoto = el('div', { class: 'photo-wrap' });
@@ -1179,7 +1209,7 @@
             setTimeout(() => status.textContent = '', 1500);
           } catch (e) { status.textContent = 'Error: ' + e.message; }
         });
-        const clearBtn = el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
+        const clearBtn = el('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: () => {
           preview.innerHTML = ''; fileInp.value = ''; save(null);
         }}, 'Clear');
         wrapPhoto.appendChild(preview);
@@ -1217,7 +1247,7 @@
 
   // ===== Attach modal =====
   function openAttachModal(woId) {
-    const list = $('#attach-list');
+    const list = $('#attach-body');
     list.innerHTML = '';
     if (!state.procedures.length) {
       list.appendChild(el('div', { class: 'empty' }, 'No procedures available. Build one first.'));
@@ -1228,19 +1258,19 @@
             el('div', { class: 'proc-title' }, p.name),
             el('div', { class: 'proc-desc small' }, `${(p.fields || []).length} fields`),
           ),
-          el('button', { class: 'btn btn-primary btn-sm', onclick: async () => {
+          el('button', { class: 'btn btn-sm', onclick: async () => {
             try {
               await apiFetch(`/api/workorders/${woId}/procedures`, {
                 method: 'POST', body: JSON.stringify({ procedureId: p.id }),
               });
-              closeModal('modal-attach');
+              closeModal('attach-modal');
               await refreshAll();
             } catch (e) { alert('Attach failed: ' + e.message); }
           }}, 'Attach'),
         ));
       });
     }
-    openModal('modal-attach');
+    openModal('attach-modal');
   }
 
   // ===== Procedure builder =====
@@ -1259,27 +1289,28 @@
     state.pbFields = proc ? JSON.parse(JSON.stringify(proc.fields || [])) : [];
     $('#pb-title').textContent = proc ? 'Edit Procedure' : 'New Procedure';
     $('#pb-name').value = proc ? (proc.name || '') : '';
-    $('#pb-description').value = proc ? (proc.description || '') : '';
+    $('#pb-desc').value = proc ? (proc.description || '') : '';
     $('#pb-delete').style.display = proc ? '' : 'none';
-    $('#ai-panel').style.display = 'none';
+    $('#ai-panel-wrap').style.display = 'none';
     $('#ai-prompt').value = '';
     $('#ai-status').textContent = '';
     renderPBFields();
-    openModal('modal-pb');
+    openModal('proc-builder-modal');
   }
 
   function renderPBFields() {
-    const wrap = $('#pb-fields'); wrap.innerHTML = '';
+    const wrap = $('#pb-fields');
+    wrap.innerHTML = '';
     if (!state.pbFields.length) {
       wrap.appendChild(el('div', { class: 'empty' }, 'No fields. Click "+ Add Field" or use AI to generate.'));
       return;
     }
     state.pbFields.forEach((f, idx) => {
       const row = el('div', { class: 'pb-field' });
-      const labelInp = el('input', { class: 'input', type: 'text', placeholder: 'Field label' });
+      const labelInp = el('input', { type: 'text', placeholder: 'Field label' });
       labelInp.value = f.label || '';
       labelInp.addEventListener('input', () => { f.label = labelInp.value; });
-      const typeSel = el('select', { class: 'input' },
+      const typeSel = el('select', {},
         ...FIELD_TYPE_OPTIONS.map(o => {
           const opt = el('option', { value: o.value }, o.label);
           if (o.value === f.type) opt.selected = true;
@@ -1293,8 +1324,8 @@
       reqCb.addEventListener('change', () => { f.required = reqCb.checked; });
       reqLbl.appendChild(reqCb);
       reqLbl.appendChild(document.createTextNode(' Required'));
-      const upBtn = el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => moveField(idx, -1) }, '↑');
-      const downBtn = el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => moveField(idx, 1) }, '↓');
+      const upBtn = el('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: () => moveField(idx, -1) }, '↑');
+      const downBtn = el('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: () => moveField(idx, 1) }, '↓');
       const delBtn = el('button', { class: 'btn btn-danger btn-sm', type: 'button', onclick: () => {
         state.pbFields.splice(idx, 1); renderPBFields();
       }}, '✕');
@@ -1321,7 +1352,7 @@
   $('#pb-save').addEventListener('click', async () => {
     const name = $('#pb-name').value.trim();
     if (!name) { alert('Procedure name is required'); return; }
-    const description = $('#pb-description').value.trim();
+    const description = $('#pb-desc').value.trim();
     const fields = state.pbFields.filter(f => (f.label || '').trim()).map(f => ({
       id: f.id || ('f_' + Math.random().toString(36).slice(2, 9)),
       label: f.label.trim(),
@@ -1335,7 +1366,7 @@
       } else {
         await apiFetch('/api/procedures', { method: 'POST', body: JSON.stringify(payload) });
       }
-      closeModal('modal-pb');
+      closeModal('proc-builder-modal');
       await refreshAll();
     } catch (e) { alert('Save failed: ' + e.message); }
   });
@@ -1345,17 +1376,18 @@
     if (!confirm(`Delete procedure "${state.editingProc.name}"?`)) return;
     try {
       await apiFetch(`/api/procedures/${state.editingProc.id}`, { method: 'DELETE' });
-      closeModal('modal-pb'); await refreshAll();
+      closeModal('proc-builder-modal');
+      await refreshAll();
     } catch (e) { alert('Delete failed: ' + e.message); }
   });
 
   // ===== AI procedure generator =====
   $('#ai-show').addEventListener('click', () => {
-    $('#ai-panel').style.display = 'block';
+    $('#ai-panel-wrap').style.display = 'block';
     $('#ai-prompt').focus();
   });
   $('#ai-cancel').addEventListener('click', () => {
-    $('#ai-panel').style.display = 'none';
+    $('#ai-panel-wrap').style.display = 'none';
     $('#ai-status').textContent = '';
   });
   $('#ai-generate').addEventListener('click', async () => {
@@ -1368,7 +1400,7 @@
         method: 'POST', body: JSON.stringify({ prompt }),
       });
       if (result.name && !$('#pb-name').value.trim()) $('#pb-name').value = result.name;
-      if (result.description && !$('#pb-description').value.trim()) $('#pb-description').value = result.description;
+      if (result.description && !$('#pb-desc').value.trim()) $('#pb-desc').value = result.description;
       if (Array.isArray(result.fields)) {
         state.pbFields = result.fields.map(f => ({
           id: 'f_' + Math.random().toString(36).slice(2, 9),
@@ -1379,18 +1411,18 @@
         renderPBFields();
       }
       $('#ai-status').textContent = `Added ${result.fields?.length || 0} fields. Review and edit as needed.`;
-      $('#ai-panel').style.display = 'none';
+      $('#ai-panel-wrap').style.display = 'none';
     } catch (e) {
       $('#ai-status').textContent = 'Error: ' + e.message;
     } finally {
       $('#ai-generate').disabled = false;
     }
   });
-<!-- ===== PART C END ===== -->
-<!-- ===== PART D START ===== -->
+<!-- ===== PART C2 END ===== -->
+<!-- ===== PART D2 START ===== -->
   // ===== AI Assistant Chat Panel =====
   const chatState = {
-    messages: [],   // [{ role: 'user'|'assistant', content: string, toolCalls?: [...], pendingConfirmations?: [...] }]
+    messages: [],
     busy: false,
   };
 
@@ -1401,10 +1433,8 @@
     'How many work orders are open?',
   ];
 
-  function chatPanel() { return $('#chat-panel'); }
-
   function toggleChat(force) {
-    const panel = chatPanel();
+    const panel = $('#chat-panel');
     const open = force != null ? force : !panel.classList.contains('open');
     panel.classList.toggle('open', open);
     document.body.classList.toggle('chat-open', open);
@@ -1484,12 +1514,14 @@
     card.appendChild(el('div', { class: 'chat-confirm-title' }, '⚠️ Confirm destructive action'));
     card.appendChild(el('div', { class: 'chat-confirm-tool' }, pc.name));
     if (pc.input) {
-      const summary = Object.entries(pc.input).map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`).join('  ·  ');
+      const summary = Object.entries(pc.input).map(([k, v]) =>
+        `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`
+      ).join('  ·  ');
       card.appendChild(el('div', { class: 'chat-confirm-input' }, summary));
     }
     card.appendChild(el('div', { class: 'chat-confirm-actions' },
       el('button', { class: 'btn btn-danger btn-sm', onclick: () => confirmTool(pc.toolUseId) }, 'Confirm'),
-      el('button', { class: 'btn btn-ghost btn-sm', onclick: () => cancelTool(pc.toolUseId) }, 'Cancel'),
+      el('button', { class: 'btn btn-secondary btn-sm', onclick: () => cancelTool(pc.toolUseId) }, 'Cancel'),
     ));
     return card;
   }
@@ -1505,7 +1537,7 @@
     chatState.busy = true;
     renderChatScroll();
     try {
-      await callAssistant({ userMessage: text });
+      await callAssistant({});
     } catch (e) {
       chatState.messages.push({ role: 'assistant', content: 'Error: ' + e.message });
     } finally {
@@ -1515,18 +1547,14 @@
   }
 
   async function callAssistant(opts) {
-    // Build history from chatState.messages (simple text-only history; backend keeps tool history server-side via reply)
     const history = chatState.messages
       .filter(m => m.role === 'user' || (m.role === 'assistant' && m.content))
       .map(m => ({ role: m.role, content: m.content }));
-    const body = {
-      messages: history,
-    };
+    const body = { messages: history };
     if (opts && opts.confirmedToolUseIds) body.confirmedToolUseIds = opts.confirmedToolUseIds;
     const result = await apiFetch('/api/assistant', {
       method: 'POST', body: JSON.stringify(body),
     });
-    // Expected shape: { reply: string, toolCalls: [{name, summary, status}], pendingConfirmations: [{toolUseId, name, input}], dataChanged: bool }
     const assistantMsg = {
       role: 'assistant',
       content: result.reply || '',
@@ -1541,7 +1569,6 @@
 
   async function confirmTool(toolUseId) {
     if (chatState.busy) return;
-    // Remove the pending confirmation from the last assistant message
     const last = [...chatState.messages].reverse().find(m => m.role === 'assistant' && m.pendingConfirmations);
     if (last) {
       last.pendingConfirmations = (last.pendingConfirmations || []).filter(pc => pc.toolUseId !== toolUseId);
@@ -1562,7 +1589,6 @@
     const last = [...chatState.messages].reverse().find(m => m.role === 'assistant' && m.pendingConfirmations);
     if (last) {
       last.pendingConfirmations = (last.pendingConfirmations || []).filter(pc => pc.toolUseId !== toolUseId);
-      // Add a synthetic note
       if (!last.toolCalls) last.toolCalls = [];
       last.toolCalls.push({ name: 'cancelled', summary: 'destructive action declined', status: 'cancelled' });
     }
@@ -1588,4 +1614,4 @@
 </script>
 </body>
 </html>
-<!-- ===== PART D END ===== -->
+<!-- ===== PART D2 END ===== -->
