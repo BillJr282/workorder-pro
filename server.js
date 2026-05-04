@@ -6,7 +6,7 @@ const { v4: uuidv4 } = require("uuid");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATA = path.join(__dirname, "data.json");
+app.use(express.static(path.join(__dirname, "public")));
 
 app.use(cors());
 app.use(express.json({ limit: "2mb" }));
