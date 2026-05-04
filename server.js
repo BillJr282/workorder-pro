@@ -1,219 +1,264 @@
+// server.js — WorkOrder Pro
+// Express + uuid + flat-file JSON storage (data.json)
+// Routes: /api/workorders (CRUD), /api/procedures (CRUD),
+//         attach/detach procedures to work orders, PATCH responses
+
 const express = require("express");
-const cors = require("cors");
-const fs = require("fs");
 const path = require("path");
+const fs = require("fs");
 const { v4: uuidv4 } = require("uuid");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-app.use(express.static(path.join(__dirname, "public")));
 
-app.use(cors());
-app.use(express.json({ limit: "2mb" }));
-app.use(express.static(__dirname));
+app.use(express.json({ limit: "1mb" }));
 
-function load() {
-  if (!fs.existsSync(DATA)) {
-    const d = { workorders: [], procedures: [], nextId: 1 };
-    fs.writeFileSync(DATA, JSON.stringify(d, null, 2));
-    return d;
+// ---------- Data layer ----------
+const DATA_FILE = path.join(__dirname, "data.json");
+
+function loadData() {
+  let data;
+  try {
+    const raw = fs.readFileSync(DATA_FILE, "utf8");
+    data = JSON.parse(raw);
+  } catch (e) {
+    data = {};
   }
-  const d = JSON.parse(fs.readFileSync(DATA, "utf8"));
-  if (!d.procedures) d.procedures = [];
-  return d;
+  // Backfill shape
+  if (!Array.isArray(data.workorders)) data.workorders = [];
+  if (!Array.isArray(data.procedures)) data.procedures = [];
+  // Backfill per-workorder fields
+  data.workorders.forEach((w) => {
+    if (!Array.isArray(w.procedures)) w.procedures = [];
+    if (!Array.isArray(w.activity)) w.activity = [];
+  });
+  return data;
 }
-function save(d) { fs.writeFileSync(DATA, JSON.stringify(d, null, 2)); }
-function now() { return new Date().toISOString(); }
 
-/* ---------- Work Orders ---------- */
+function saveData(data) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf8");
+}
 
-app.get("/api/workorders", (q, r) => r.json(load().workorders));
-
-app.get("/api/workorders/:id", (q, r) => {
-  const w = load().workorders.find(x => x.id === q.params.id);
-  w ? r.json(w) : r.status(404).json({ error: "Not found" });
-});
-
-app.post("/api/workorders", (q, r) => {
-  const d = load();
-  const w = {
+function logActivity(wo, message) {
+  wo.activity = wo.activity || [];
+  wo.activity.push({
     id: uuidv4(),
-    woNumber: "WO-" + String(d.nextId).padStart(4, "0"),
-    ...q.body,
-    createdAt: now(), updatedAt: now(),
-    comments: [], parts: [], procedures: [],
-    activity: [{ text: "Created by " + (q.body.assignee || "Bill"), time: now() }]
+    at: new Date().toISOString(),
+    message,
+  });
+}
+
+// ---------- Health ----------
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true, ts: new Date().toISOString() });
+});
+
+// ---------- Work Orders ----------
+app.get("/api/workorders", (req, res) => {
+  const data = loadData();
+  res.json(data.workorders);
+});
+
+app.get("/api/workorders/:id", (req, res) => {
+  const data = loadData();
+  const wo = data.workorders.find((w) => w.id === req.params.id);
+  if (!wo) return res.status(404).json({ error: "Not found" });
+  res.json(wo);
+});
+
+app.post("/api/workorders", (req, res) => {
+  const data = loadData();
+  const { title, description, status, priority, assignee } = req.body || {};
+  if (!title) return res.status(400).json({ error: "title required" });
+  const wo = {
+    id: uuidv4(),
+    title,
+    description: description || "",
+    status: status || "open",
+    priority: priority || "medium",
+    assignee: assignee || "",
+    procedures: [],
+    activity: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
-  d.workorders.push(w); d.nextId++; save(d); r.status(201).json(w);
+  logActivity(wo, `Work order created: ${title}`);
+  data.workorders.push(wo);
+  saveData(data);
+  res.status(201).json(wo);
 });
 
-app.put("/api/workorders/:id", (q, r) => {
-  const d = load();
-  const i = d.workorders.findIndex(x => x.id === q.params.id);
-  if (i < 0) return r.status(404).json({ error: "Not found" });
-  d.workorders[i] = { ...d.workorders[i], ...q.body, id: q.params.id, updatedAt: now() };
-  save(d); r.json(d.workorders[i]);
+app.put("/api/workorders/:id", (req, res) => {
+  const data = loadData();
+  const wo = data.workorders.find((w) => w.id === req.params.id);
+  if (!wo) return res.status(404).json({ error: "Not found" });
+  const { title, description, status, priority, assignee } = req.body || {};
+  if (title !== undefined) wo.title = title;
+  if (description !== undefined) wo.description = description;
+  if (status !== undefined && status !== wo.status) {
+    logActivity(wo, `Status changed to ${status}`);
+    wo.status = status;
+  }
+  if (priority !== undefined) wo.priority = priority;
+  if (assignee !== undefined) wo.assignee = assignee;
+  wo.updatedAt = new Date().toISOString();
+  saveData(data);
+  res.json(wo);
 });
 
-app.delete("/api/workorders/:id", (q, r) => {
-  const d = load();
-  d.workorders = d.workorders.filter(x => x.id !== q.params.id);
-  save(d); r.json({ success: true });
+app.delete("/api/workorders/:id", (req, res) => {
+  const data = loadData();
+  const idx = data.workorders.findIndex((w) => w.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Not found" });
+  const [removed] = data.workorders.splice(idx, 1);
+  saveData(data);
+  res.json({ ok: true, removed });
 });
 
-app.post("/api/workorders/:id/comments", (q, r) => {
-  const d = load();
-  const w = d.workorders.find(x => x.id === q.params.id);
-  if (!w) return r.status(404).json({ error: "Not found" });
-  const c = { id: uuidv4(), author: q.body.author || "Bill", text: q.body.text, time: now() };
-  w.comments.push(c);
-  w.activity.push({ text: (q.body.author || "Bill") + " added a comment", time: now() });
-  w.updatedAt = now();
-  save(d); r.json(c);
+// ---------- Procedures (NEW) ----------
+// A procedure is a reusable template:
+// { id, name, description, fields: [{id, type, label, required, options?}], createdAt, updatedAt }
+// Field types: "checkbox", "text", "number", "passfail"
+
+app.get("/api/procedures", (req, res) => {
+  const data = loadData();
+  res.json(data.procedures);
 });
 
-/* ---------- Procedures (NEW) ---------- */
-
-app.get("/api/procedures", (q, r) => r.json(load().procedures));
-
-app.get("/api/procedures/:id", (q, r) => {
-  const p = load().procedures.find(x => x.id === q.params.id);
-  p ? r.json(p) : r.status(404).json({ error: "Not found" });
+app.get("/api/procedures/:id", (req, res) => {
+  const data = loadData();
+  const p = data.procedures.find((x) => x.id === req.params.id);
+  if (!p) return res.status(404).json({ error: "Not found" });
+  res.json(p);
 });
 
-app.post("/api/procedures", (q, r) => {
-  const d = load();
+app.post("/api/procedures", (req, res) => {
+  const data = loadData();
+  const { name, description, fields } = req.body || {};
+  if (!name) return res.status(400).json({ error: "name required" });
   const p = {
     id: uuidv4(),
-    title: q.body.title || "Untitled Procedure",
-    description: q.body.description || "",
-    sections: Array.isArray(q.body.sections) ? q.body.sections : [],
-    createdBy: q.body.createdBy || "Bill",
-    createdAt: now(),
-    updatedAt: now()
+    name,
+    description: description || "",
+    fields: Array.isArray(fields) ? fields.map(normalizeField) : [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
-  d.procedures.push(p); save(d); r.status(201).json(p);
+  data.procedures.push(p);
+  saveData(data);
+  res.status(201).json(p);
 });
 
-app.put("/api/procedures/:id", (q, r) => {
-  const d = load();
-  const i = d.procedures.findIndex(x => x.id === q.params.id);
-  if (i < 0) return r.status(404).json({ error: "Not found" });
-  d.procedures[i] = {
-    ...d.procedures[i],
-    title: q.body.title ?? d.procedures[i].title,
-    description: q.body.description ?? d.procedures[i].description,
-    sections: q.body.sections ?? d.procedures[i].sections,
-    updatedAt: now()
-  };
-  save(d); r.json(d.procedures[i]);
-});
-
-app.delete("/api/procedures/:id", (q, r) => {
-  const d = load();
-  d.procedures = d.procedures.filter(x => x.id !== q.params.id);
-  d.workorders.forEach(w => {
-    if (Array.isArray(w.procedures)) {
-      w.procedures = w.procedures.filter(a => a.procedureId !== q.params.id);
-    }
-  });
-  save(d); r.json({ success: true });
-});
-
-/* ---------- Attach / detach procedures to a work order ---------- */
-
-app.post("/api/workorders/:id/procedures", (q, r) => {
-  const d = load();
-  const w = d.workorders.find(x => x.id === q.params.id);
-  if (!w) return r.status(404).json({ error: "Work order not found" });
-  const p = d.procedures.find(x => x.id === q.body.procedureId);
-  if (!p) return r.status(404).json({ error: "Procedure not found" });
-
-  if (!Array.isArray(w.procedures)) w.procedures = [];
-
-  const fieldCount = (p.sections || []).reduce((n, s) => n + (s.fields || []).length, 0);
-
-  const attachment = {
-    attachmentId: uuidv4(),
-    procedureId: p.id,
-    title: p.title,
-    description: p.description,
-    sections: JSON.parse(JSON.stringify(p.sections || [])),
-    responses: {},
-    completed: false,
-    completedBy: null,
-    completedAt: null,
-    attachedAt: now(),
-    attachedBy: q.body.attachedBy || "Bill"
-  };
-  w.procedures.push(attachment);
-  w.activity.push({
-    text: (q.body.attachedBy || "Bill") +
-      " attached procedure \u201C" + p.title + "\u201D (" + fieldCount + " fields)",
-    time: now()
-  });
-  w.updatedAt = now();
-  save(d); r.status(201).json(attachment);
-});
-
-app.delete("/api/workorders/:id/procedures/:attachmentId", (q, r) => {
-  const d = load();
-  const w = d.workorders.find(x => x.id === q.params.id);
-  if (!w) return r.status(404).json({ error: "Work order not found" });
-  const before = (w.procedures || []).length;
-  w.procedures = (w.procedures || []).filter(a => a.attachmentId !== q.params.attachmentId);
-  if (w.procedures.length === before) return r.status(404).json({ error: "Attachment not found" });
-  w.activity.push({ text: "Procedure detached from work order", time: now() });
-  w.updatedAt = now();
-  save(d); r.json({ success: true });
-});
-
-app.patch("/api/workorders/:id/procedures/:attachmentId/responses", (q, r) => {
-  const d = load();
-  const w = d.workorders.find(x => x.id === q.params.id);
-  if (!w) return r.status(404).json({ error: "Work order not found" });
-  const a = (w.procedures || []).find(x => x.attachmentId === q.params.attachmentId);
-  if (!a) return r.status(404).json({ error: "Attachment not found" });
-
-  a.responses = { ...(a.responses || {}), ...(q.body.responses || {}) };
-
-  if (typeof q.body.completed === "boolean") {
-    a.completed = q.body.completed;
-    if (q.body.completed) {
-      a.completedBy = q.body.completedBy || "Bill";
-      a.completedAt = now();
-      w.activity.push({
-        text: a.completedBy + " completed procedure \u201C" + a.title + "\u201D",
-        time: now()
-      });
-    } else {
-      a.completedBy = null;
-      a.completedAt = null;
-    }
+app.put("/api/procedures/:id", (req, res) => {
+  const data = loadData();
+  const p = data.procedures.find((x) => x.id === req.params.id);
+  if (!p) return res.status(404).json({ error: "Not found" });
+  const { name, description, fields } = req.body || {};
+  if (name !== undefined) p.name = name;
+  if (description !== undefined) p.description = description;
+  if (fields !== undefined && Array.isArray(fields)) {
+    p.fields = fields.map(normalizeField);
   }
-
-  w.updatedAt = now();
-  save(d); r.json(a);
+  p.updatedAt = new Date().toISOString();
+  saveData(data);
+  res.json(p);
 });
 
-/* ---------- Export / Import ---------- */
-
-app.get("/api/export", (q, r) => {
-  r.setHeader("Content-Disposition", "attachment; filename=workorder-backup.json");
-  r.json(load());
+app.delete("/api/procedures/:id", (req, res) => {
+  const data = loadData();
+  const idx = data.procedures.findIndex((x) => x.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Not found" });
+  const [removed] = data.procedures.splice(idx, 1);
+  saveData(data);
+  res.json({ ok: true, removed });
 });
 
-app.post("/api/import", (q, r) => {
-  save(q.body);
-  r.json({ success: true, count: (q.body.workorders || []).length });
+function normalizeField(f) {
+  const allowed = ["checkbox", "text", "number", "passfail"];
+  return {
+    id: f.id || uuidv4(),
+    type: allowed.includes(f.type) ? f.type : "text",
+    label: f.label || "Untitled field",
+    required: !!f.required,
+  };
+}
+
+// ---------- Attach / Detach procedures to work orders ----------
+// POST /api/workorders/:id/procedures  body: { procedureId }
+// Snapshots the procedure structure onto the WO at attach time.
+
+app.post("/api/workorders/:id/procedures", (req, res) => {
+  const data = loadData();
+  const wo = data.workorders.find((w) => w.id === req.params.id);
+  if (!wo) return res.status(404).json({ error: "Work order not found" });
+  const { procedureId } = req.body || {};
+  const p = data.procedures.find((x) => x.id === procedureId);
+  if (!p) return res.status(404).json({ error: "Procedure not found" });
+
+  const instance = {
+    instanceId: uuidv4(),
+    procedureId: p.id,
+    name: p.name,
+    description: p.description,
+    fields: p.fields.map((f) => ({ ...f })), // snapshot
+    responses: {}, // fieldId -> value
+    status: "in_progress", // in_progress | complete
+    attachedAt: new Date().toISOString(),
+    completedAt: null,
+  };
+  wo.procedures.push(instance);
+  logActivity(wo, `Procedure attached: ${p.name}`);
+  wo.updatedAt = new Date().toISOString();
+  saveData(data);
+  res.status(201).json(instance);
 });
 
-app.listen(PORT, "0.0.0.0", () => {
-  const nets = require("os").networkInterfaces();
-  console.log("\n  WorkOrder Pro is running!");
-  console.log("  Open this in your browser: http://localhost:" + PORT + "\n");
-  for (const n of Object.values(nets).flat())
-    if (n.family === "IPv4" && !n.internal)
-      console.log("  Others on your network: http://" + n.address + ":" + PORT);
-  console.log("");
+app.delete("/api/workorders/:id/procedures/:instanceId", (req, res) => {
+  const data = loadData();
+  const wo = data.workorders.find((w) => w.id === req.params.id);
+  if (!wo) return res.status(404).json({ error: "Work order not found" });
+  const idx = wo.procedures.findIndex((p) => p.instanceId === req.params.instanceId);
+  if (idx === -1) return res.status(404).json({ error: "Procedure instance not found" });
+  const [removed] = wo.procedures.splice(idx, 1);
+  logActivity(wo, `Procedure detached: ${removed.name}`);
+  wo.updatedAt = new Date().toISOString();
+  saveData(data);
+  res.json({ ok: true, removed });
+});
+
+// PATCH responses for a procedure instance (debounced from client)
+// body: { responses: { fieldId: value, ... }, status?: "in_progress"|"complete" }
+app.patch("/api/workorders/:id/procedures/:instanceId", (req, res) => {
+  const data = loadData();
+  const wo = data.workorders.find((w) => w.id === req.params.id);
+  if (!wo) return res.status(404).json({ error: "Work order not found" });
+  const inst = wo.procedures.find((p) => p.instanceId === req.params.instanceId);
+  if (!inst) return res.status(404).json({ error: "Procedure instance not found" });
+
+  const { responses, status } = req.body || {};
+  if (responses && typeof responses === "object") {
+    inst.responses = { ...inst.responses, ...responses };
+  }
+  if (status && (status === "in_progress" || status === "complete")) {
+    if (status === "complete" && inst.status !== "complete") {
+      inst.completedAt = new Date().toISOString();
+      logActivity(wo, `Procedure completed: ${inst.name}`);
+    }
+    if (status === "in_progress" && inst.status === "complete") {
+      inst.completedAt = null;
+      logActivity(wo, `Procedure reopened: ${inst.name}`);
+    }
+    inst.status = status;
+  }
+  wo.updatedAt = new Date().toISOString();
+  saveData(data);
+  res.json(inst);
+});
+
+// ---------- Static files (must come AFTER API routes) ----------
+app.use(express.static(path.join(__dirname, "public")));
+
+// ---------- Start ----------
+app.listen(PORT, () => {
+  console.log(`WorkOrder Pro listening on ${PORT}`);
 });
