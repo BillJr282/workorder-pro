@@ -11,7 +11,7 @@ const { v4: uuidv4 } = require("uuid");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "10mb" }));
 
 // ---------- Data layer ----------
 const DATA_FILE = path.join(__dirname, "data.json");
@@ -174,7 +174,7 @@ app.delete("/api/procedures/:id", (req, res) => {
 });
 
 function normalizeField(f) {
-  const allowed = ["checkbox", "text", "number", "passfail"];
+  const allowed = ["checkbox", "text", "number", "passfail", "date", "signature", "photo"];
   return {
     id: f.id || uuidv4(),
     type: allowed.includes(f.type) ? f.type : "text",
