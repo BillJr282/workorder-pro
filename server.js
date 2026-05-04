@@ -61,8 +61,7 @@ console.log(`[startup] DATA_FILE = ${DATA_FILE}`);
   // Prune expired sessions on every load
   const now = Date.now();
   data.sessions = data.sessions.filter(s => !s.expiresAt || s.expiresAt > now);
-  data.workorders.forEach((w) => {
-  data.workorders.forEach((w) => {
+    data.workorders.forEach((w) => {
     if (!Array.isArray(w.procedures)) w.procedures = [];
     if (!Array.isArray(w.activity)) w.activity = [];
     // ---- Ticket 8 migration: customer / asset / parts / labor / costs / totals ----
