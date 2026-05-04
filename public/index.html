@@ -852,7 +852,8 @@
   }
   function showApp() {
     $('#login-screen').style.display = 'none';
-    $('#app').style.display = '';
+    $('#app').style.display = 'block';
+    $('#app').classList.add('show-fab');
     $('#current-user').textContent = getCurrentUser();
     setView(state.view);
     refreshAll();
