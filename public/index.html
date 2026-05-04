@@ -140,6 +140,20 @@
   .nav-item:hover { background: var(--panel-2); color: var(--text); }
   .nav-item.active { background: var(--accent); color: white; }
   .sidebar-footer {
+    /* Ticket 10: user badge */
+.user-badge { display: flex; flex-direction: column; gap: 2px; line-height: 1.2; min-width: 0; }
+.user-badge #current-user-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-role-pill { display: inline-block; align-self: flex-start; padding: 1px 8px; border-radius: 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+.user-role-pill.role-admin { background: #6d28d9; color: #ede9fe; }
+.user-role-pill.role-tech { background: #1e40af; color: #dbeafe; }
+    /* Ticket 10: Users list */
+.users-table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.users-table th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--border); font-weight: 500; letter-spacing: 0.04em; }
+.users-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.users-table tbody tr:last-child td { border-bottom: none; }
+.users-table .users-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.users-table .you-tag { font-size: 10px; color: var(--muted); margin-left: 6px; }
+.form-hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
     padding: 12px 16px;
     border-top: 1px solid var(--border);
     font-size: 12px;
@@ -572,9 +586,10 @@
 <!-- ===== PART 1 END ===== -->
 <!-- ===== PART 2A START ===== -->
 
-<!-- ============ LOGIN SCREEN ============ -->
+<!-- ============ LOGIN / SETUP SCREEN (Ticket 10) ============ -->
 <div id="login-screen">
-  <div class="login-card">
+  <!-- Login form (shown when system is initialized) -->
+  <div class="login-card" id="login-form">
     <h1>WorkOrder Pro</h1>
     <p>Sign in to continue</p>
     <div class="field">
@@ -588,6 +603,36 @@
     <button class="btn" id="login-btn">Sign In</button>
     <div class="login-error" id="login-error"></div>
   </div>
+
+  <!-- First-time setup form (shown when users[] is empty) -->
+  <div class="login-card" id="setup-form" style="display:none;">
+    <h1>Welcome to WorkOrder Pro</h1>
+    <p>Create the first administrator account.</p>
+    <div class="field">
+      <label for="setup-user">Username</label>
+      <input id="setup-user" type="text" autocomplete="username" placeholder="2-32 chars: letters, numbers, . _ -" />
+    </div>
+    <div class="field">
+      <label for="setup-display">Display Name (optional)</label>
+      <input id="setup-display" type="text" autocomplete="name" />
+    </div>
+    <div class="field">
+      <label for="setup-pass">Password</label>
+      <input id="setup-pass" type="password" autocomplete="new-password" placeholder="At least 8 characters" />
+    </div>
+    <div class="field">
+      <label for="setup-pass2">Confirm Password</label>
+      <input id="setup-pass2" type="password" autocomplete="new-password" />
+    </div>
+    <button class="btn" id="setup-btn">Create Admin & Sign In</button>
+    <div class="login-error" id="setup-error"></div>
+  </div>
+
+  <!-- Loading state while we check setup status -->
+  <div class="login-card" id="auth-loading">
+    <h1>WorkOrder Pro</h1>
+    <p>Loading…</p>
+  </div>
 </div>
 
 <!-- ============ APP SHELL ============ -->
@@ -596,17 +641,23 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">WorkOrder Pro</div>
       <nav class="nav">
-        <div class="nav-item active" data-view="workorders">
-          <span>📋</span><span>Work Orders</span>
-        </div>
-        <div class="nav-item" data-view="procedures">
-          <span>📝</span><span>Procedures</span>
-        </div>
-      </nav>
+  <div class="nav-item active" data-view="workorders">
+    <span>📋</span><span>Work Orders</span>
+  </div>
+  <div class="nav-item" data-view="procedures">
+    <span>📝</span><span>Procedures</span>
+  </div>
+  <div class="nav-item" data-view="users" data-admin-only="1" style="display:none;">
+    <span>👥</span><span>Users</span>
+  </div>
+</nav>
       <div class="sidebar-footer">
-        <span id="current-user">—</span>
-        <button class="btn-icon" id="logout-btn" title="Sign out">⎋</button>
-      </div>
+  <div class="user-badge">
+    <span id="current-user-name">—</span>
+    <span class="user-role-pill" id="current-user-role"></span>
+  </div>
+  <button class="btn-icon" id="logout-btn" title="Sign out">⎋</button>
+</div>
     </aside>
 
     <main class="main">
@@ -622,16 +673,28 @@
       </section>
 
       <section id="view-procedures" style="display:none;">
-        <div class="view-header">
-          <div style="display:flex; align-items:center;">
-            <button class="mobile-menu-btn" id="menu-btn-2">☰</button>
-            <h2>Procedures</h2>
-          </div>
-          <button class="btn" id="new-proc-btn">+ New Procedure</button>
+      <div class="view-header">
+        <div style="display:flex; align-items:center;">
+          <button class="mobile-menu-btn" id="menu-btn-2">☰</button>
+          <h2>Procedures</h2>
         </div>
-        <div id="proc-list" class="card-grid"></div>
-      </section>
-    </main>
+        <button class="btn" id="new-proc-btn">+ New Procedure</button>
+      </div>
+      <div id="proc-list" class="card-grid"></div>
+    </section>
+
+    <!-- ============ Ticket 10: Users (admin only) ============ -->
+    <section id="view-users" style="display:none;">
+      <div class="view-header">
+        <div style="display:flex; align-items:center;">
+          <button class="mobile-menu-btn" id="menu-btn-3">☰</button>
+          <h2>Users</h2>
+        </div>
+        <button class="btn" id="new-user-btn">+ New User</button>
+      </div>
+      <div id="users-list"></div>
+    </section>
+  </main>
   </div>
 
   <!-- Floating chat button -->
@@ -869,6 +932,42 @@
 
 <!-- ============ MODAL: ATTACH PROCEDURE PICKER ============ -->
 <div class="modal-backdrop" id="attach-modal">
+  <!-- ============ Ticket 10: Add / Edit User modal ============ -->
+<div class="modal-backdrop" id="user-form-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="uf-title">New User</h3>
+      <button class="btn-icon" data-close="user-form-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <label>Username</label>
+        <input id="uf-username" type="text" placeholder="2-32 chars: letters, numbers, . _ -" />
+      </div>
+      <div class="field-row">
+        <label>Display Name</label>
+        <input id="uf-display" type="text" />
+      </div>
+      <div class="field-row">
+        <label>Role</label>
+        <select id="uf-role">
+          <option value="tech">Tech</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <label id="uf-pass-label">Password</label>
+        <input id="uf-pass" type="password" placeholder="At least 8 characters" autocomplete="new-password" />
+        <div class="form-hint" id="uf-pass-hint" style="display:none;">Leave blank to keep the existing password.</div>
+      </div>
+      <div class="login-error" id="uf-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close="user-form-modal">Cancel</button>
+      <button class="btn" id="uf-save">Save</button>
+    </div>
+  </div>
+</div>
   <div class="modal">
     <div class="modal-header">
       <h3>Attach Procedure</h3>
@@ -903,12 +1002,10 @@
 <!-- ===== PART A2 START ===== -->
 <script>
 (() => {
-  // ===== Auth (client-side only, demo) =====
-  const USERS = { bill: 'bill', serina: 'serina' };
-  const SESSION_KEY = 'wopro_user';
-  const getCurrentUser = () => sessionStorage.getItem(SESSION_KEY);
-  const setCurrentUser = (u) => sessionStorage.setItem(SESSION_KEY, u);
-  const clearCurrentUser = () => sessionStorage.removeItem(SESSION_KEY);
+  // ===== Auth (Ticket 10: server-backed) =====
+let currentUser = null; // { id, username, displayName, role, createdAt } or null
+const getCurrentUser = () => currentUser;
+const isAdmin = () => currentUser && currentUser.role === 'admin';
 
   // ===== API client =====
   async function apiFetch(path, opts = {}) {
@@ -982,41 +1079,126 @@
   }
   if ($('#lightbox')) $('#lightbox').addEventListener('click', () => $('#lightbox').classList.remove('show'));
 
-  // ===== Login (button click) =====
-  function attemptLogin() {
-    const u = $('#login-user').value.trim().toLowerCase();
-    const p = $('#login-pass').value;
-    if (USERS[u] && USERS[u] === p) {
-      setCurrentUser(u);
-      $('#login-error').textContent = '';
-      showApp();
-    } else {
-      $('#login-error').textContent = 'Invalid username or password';
-    }
-  }
-  $('#login-btn').addEventListener('click', (e) => { e.preventDefault(); attemptLogin(); });
-  // Allow Enter key in either input to submit
-  ['#login-user', '#login-pass'].forEach(sel => {
-    $(sel).addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); attemptLogin(); }
-    });
-  });
-  $('#logout-btn').addEventListener('click', () => { clearCurrentUser(); showLogin(); });
+ // ===== Login / Setup (Ticket 10: server-backed) =====
+function showAuthLoading() {
+  $('#login-screen').style.display = 'flex';
+  $('#app').style.display = 'none';
+  $('#auth-loading').style.display = '';
+  $('#login-form').style.display = 'none';
+  $('#setup-form').style.display = 'none';
+}
+function showLoginForm() {
+  $('#login-screen').style.display = 'flex';
+  $('#app').style.display = 'none';
+  $('#auth-loading').style.display = 'none';
+  $('#login-form').style.display = '';
+  $('#setup-form').style.display = 'none';
+  $('#login-user').value = '';
+  $('#login-pass').value = '';
+  $('#login-error').textContent = '';
+  setTimeout(() => $('#login-user').focus(), 50);
+}
+function showSetupForm() {
+  $('#login-screen').style.display = 'flex';
+  $('#app').style.display = 'none';
+  $('#auth-loading').style.display = 'none';
+  $('#login-form').style.display = 'none';
+  $('#setup-form').style.display = '';
+  $('#setup-user').value = '';
+  $('#setup-display').value = '';
+  $('#setup-pass').value = '';
+  $('#setup-pass2').value = '';
+  $('#setup-error').textContent = '';
+  setTimeout(() => $('#setup-user').focus(), 50);
+}
 
-  function showLogin() {
-    $('#login-screen').style.display = 'flex';
-    $('#app').style.display = 'none';
-    $('#login-user').value = '';
-    $('#login-pass').value = '';
+async function attemptLogin() {
+  const u = $('#login-user').value.trim();
+  const p = $('#login-pass').value;
+  if (!u || !p) { $('#login-error').textContent = 'Username and password required'; return; }
+  $('#login-error').textContent = 'Signing in…';
+  try {
+    const res = await apiFetch('/api/login', { method: 'POST', body: JSON.stringify({ username: u, password: p }) });
+    currentUser = res.user;
+    $('#login-error').textContent = '';
+    showApp();
+  } catch (e) {
+    $('#login-error').textContent = e.message || 'Sign in failed';
   }
-  function showApp() {
-    $('#login-screen').style.display = 'none';
-    $('#app').style.display = 'block';
-    $('#app').classList.add('show-fab');
-    $('#current-user').textContent = getCurrentUser();
-    setView(state.view);
-    refreshAll();
+}
+
+async function attemptSetup() {
+  const u = $('#setup-user').value.trim();
+  const d = $('#setup-display').value.trim();
+  const p = $('#setup-pass').value;
+  const p2 = $('#setup-pass2').value;
+  if (!u || !p) { $('#setup-error').textContent = 'Username and password required'; return; }
+  if (p.length < 8) { $('#setup-error').textContent = 'Password must be at least 8 characters'; return; }
+  if (p !== p2) { $('#setup-error').textContent = 'Passwords do not match'; return; }
+  $('#setup-error').textContent = 'Creating admin…';
+  try {
+    const res = await apiFetch('/api/setup', { method: 'POST', body: JSON.stringify({ username: u, password: p, displayName: d }) });
+    currentUser = res.user;
+    $('#setup-error').textContent = '';
+    showApp();
+  } catch (e) {
+    $('#setup-error').textContent = e.message || 'Setup failed';
   }
+}
+
+$('#login-btn').addEventListener('click', (e) => { e.preventDefault(); attemptLogin(); });
+['#login-user', '#login-pass'].forEach(sel => {
+  $(sel).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); attemptLogin(); } });
+});
+$('#setup-btn').addEventListener('click', (e) => { e.preventDefault(); attemptSetup(); });
+['#setup-user', '#setup-display', '#setup-pass', '#setup-pass2'].forEach(sel => {
+  $(sel).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); attemptSetup(); } });
+});
+
+$('#logout-btn').addEventListener('click', async () => {
+  try { await apiFetch('/api/logout', { method: 'POST' }); } catch (_) {}
+  currentUser = null;
+  showLoginForm();
+});
+
+function showApp() {
+  $('#login-screen').style.display = 'none';
+  $('#app').style.display = 'block';
+  $('#app').classList.add('show-fab');
+  if (currentUser) {
+    $('#current-user-name').textContent = currentUser.displayName || currentUser.username;
+    const rolePill = $('#current-user-role');
+    rolePill.textContent = currentUser.role || '';
+    rolePill.className = 'user-role-pill role-' + (currentUser.role || '');
+  }
+  // Toggle admin-only nav items
+  $$('.nav-item').forEach(n => {
+    if (n.dataset.adminOnly === '1') n.style.display = isAdmin() ? '' : 'none';
+  });
+  setView(state.view);
+  refreshAll();
+}
+
+async function bootAuth() {
+  showAuthLoading();
+  // Try /api/me to see if we already have a session
+  try {
+    const me = await apiFetch('/api/me');
+    currentUser = me.user;
+    showApp();
+    return;
+  } catch (_) { /* not signed in */ }
+  // No session — check whether system needs setup
+  try {
+    const status = await apiFetch('/api/setup-status');
+    if (status.needsSetup) showSetupForm();
+    else showLoginForm();
+  } catch (e) {
+    // If even /api/setup-status fails, fall back to login form with the error
+    showLoginForm();
+    $('#login-error').textContent = 'Server unreachable: ' + (e.message || 'unknown');
+  }
+}
 
   // ===== View switching (.nav-item[data-view]) =====
   $$('.nav-item').forEach(n => n.addEventListener('click', () => {
@@ -2130,8 +2312,137 @@ function openWoForm(wo) {
     e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px';
   });
 
-  // ===== Boot =====
-  if (getCurrentUser()) showApp(); else showLogin();
+ // ===== Ticket 10: Users admin tab =====
+const userFormState = { editingId: null };
+
+async function refreshUsers() {
+  if (!isAdmin()) return;
+  try {
+    const list = await apiFetch('/api/users');
+    state.users = list || [];
+    if (state.view === 'users') renderUsers();
+  } catch (e) {
+    console.error('refreshUsers', e);
+  }
+}
+
+function renderUsers() {
+  const wrap = $('#users-list');
+  wrap.innerHTML = '';
+  const list = state.users || [];
+  if (!list.length) {
+    wrap.appendChild(el('div', { class: 'empty' }, 'No users yet. Click "+ New User" to add one.'));
+    return;
+  }
+  const t = el('table', { class: 'users-table' });
+  const thead = el('thead');
+  const trh = el('tr');
+  ['Username', 'Display Name', 'Role', 'Created', ''].forEach(h => trh.appendChild(el('th', {}, h)));
+  thead.appendChild(trh);
+  t.appendChild(thead);
+  const tb = el('tbody');
+  list.forEach(u => {
+    const tr = el('tr');
+    const isMe = currentUser && u.id === currentUser.id;
+    tr.appendChild(el('td', {}, u.username, isMe ? el('span', { class: 'you-tag' }, '(you)') : null));
+    tr.appendChild(el('td', {}, u.displayName || '—'));
+    tr.appendChild(el('td', {}, el('span', { class: 'user-role-pill role-' + u.role }, u.role)));
+    tr.appendChild(el('td', {}, fmtDate(u.createdAt)));
+    const actions = el('div', { class: 'users-actions' });
+    actions.appendChild(el('button', { class: 'btn btn-secondary btn-sm', onclick: () => openUserForm(u) }, 'Edit'));
+    if (!isMe) {
+      actions.appendChild(el('button', { class: 'btn btn-danger btn-sm', onclick: () => deleteUser(u) }, 'Delete'));
+    }
+    tr.appendChild(el('td', {}, actions));
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+  wrap.appendChild(t);
+}
+
+function openUserForm(user) {
+  userFormState.editingId = user ? user.id : null;
+  $('#uf-title').textContent = user ? 'Edit User' : 'New User';
+  $('#uf-username').value = user ? user.username : '';
+  $('#uf-username').disabled = !!user; // username is immutable after creation
+  $('#uf-display').value = user ? (user.displayName || '') : '';
+  $('#uf-role').value = user ? user.role : 'tech';
+  $('#uf-pass').value = '';
+  $('#uf-error').textContent = '';
+  if (user) {
+    $('#uf-pass-label').textContent = 'New Password (optional)';
+    $('#uf-pass-hint').style.display = '';
+    $('#uf-pass').placeholder = 'Leave blank to keep current password';
+  } else {
+    $('#uf-pass-label').textContent = 'Password';
+    $('#uf-pass-hint').style.display = 'none';
+    $('#uf-pass').placeholder = 'At least 8 characters';
+  }
+  openModal('user-form-modal');
+  setTimeout(() => { (user ? $('#uf-display') : $('#uf-username')).focus(); }, 50);
+}
+
+$('#new-user-btn') && $('#new-user-btn').addEventListener('click', () => openUserForm(null));
+
+$('#uf-save') && $('#uf-save').addEventListener('click', async () => {
+  const username = $('#uf-username').value.trim();
+  const displayName = $('#uf-display').value.trim();
+  const role = $('#uf-role').value;
+  const password = $('#uf-pass').value;
+  const errEl = $('#uf-error');
+  errEl.textContent = '';
+  try {
+    if (userFormState.editingId) {
+      const body = { displayName, role };
+      if (password) body.password = password;
+      await apiFetch('/api/users/' + userFormState.editingId, { method: 'PUT', body: JSON.stringify(body) });
+    } else {
+      if (!username) { errEl.textContent = 'Username required'; return; }
+      if (!password || password.length < 8) { errEl.textContent = 'Password must be at least 8 characters'; return; }
+      await apiFetch('/api/users', { method: 'POST', body: JSON.stringify({ username, displayName, role, password }) });
+    }
+    closeModal('user-form-modal');
+    userFormState.editingId = null;
+    await refreshUsers();
+  } catch (e) {
+    errEl.textContent = e.message || 'Save failed';
+  }
+});
+
+async function deleteUser(u) {
+  if (!confirm(`Delete user "${u.username}"? This cannot be undone.`)) return;
+  try {
+    await apiFetch('/api/users/' + u.id, { method: 'DELETE' });
+    await refreshUsers();
+  } catch (e) {
+    alert('Delete failed: ' + e.message);
+  }
+}
+
+// Hook into setView to render users when that view is opened.
+// We monkey-patch the existing setView so we don't have to find/replace it.
+const _origSetView = setView;
+setView = function(v) {
+  _origSetView(v);
+  $('#view-users') && ($('#view-users').style.display = v === 'users' ? '' : 'none');
+  if (v === 'users') {
+    if (isAdmin()) refreshUsers();
+    else renderUsers();
+  }
+};
+
+// Mobile menu button #3 for the users view
+$('#menu-btn-3') && $('#menu-btn-3').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+
+// Hook into refreshAll so users list stays fresh
+const _origRefreshAll = refreshAll;
+refreshAll = async function() {
+  await _origRefreshAll();
+  if (isAdmin()) await refreshUsers();
+};
+
+// ===== Boot (Ticket 10) =====
+bootAuth();
 })();
 </script>
 </body>
