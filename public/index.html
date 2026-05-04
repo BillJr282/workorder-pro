@@ -527,6 +527,40 @@
     font-size: 22px;
     margin-right: 10px;
   }
+  /* ============ Ticket 8: Line-item sections ============ */
+.wo-section { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 14px; }
+.wo-section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.wo-section-head h4 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.wo-section-head .wo-section-add { padding: 4px 10px; font-size: 12px; }
+.li-table { width: 100%; border-collapse: collapse; }
+.li-table thead th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--border); font-weight: 500; letter-spacing: 0.04em; }
+.li-table tbody td { padding: 4px; vertical-align: middle; }
+.li-table tbody td input { padding: 6px 8px; font-size: 13px; }
+.li-table tbody td.li-num input { text-align: right; }
+.li-table .li-line-total { text-align: right; padding-right: 10px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 90px; }
+.li-table tbody tr.li-empty td { color: var(--muted); text-align: center; font-style: italic; padding: 10px; }
+.li-table .li-remove { background: transparent; border: none; color: var(--muted); cursor: pointer; padding: 2px 6px; }
+.li-table .li-remove:hover { color: var(--danger); }
+.totals-card { background: var(--panel); border: 1px solid var(--accent); border-radius: 8px; padding: 12px 14px; margin-top: 6px; }
+.totals-row { display: flex; justify-content: space-between; padding: 4px 0; font-variant-numeric: tabular-nums; }
+.totals-row.totals-grand { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; font-weight: 600; font-size: 15px; color: var(--accent); }
+.totals-label { color: var(--muted); }
+/* Detail-view read-only line tables */
+.li-readonly { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 13px; }
+.li-readonly th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--border); font-weight: 500; }
+.li-readonly td { padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.li-readonly td.li-num, .li-readonly th.li-num { text-align: right; font-variant-numeric: tabular-nums; }
+.li-readonly tbody tr:last-child td { border-bottom: none; }
+.wo-asset-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 14px; font-size: 13px; }
+.wo-asset-grid .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+.wo-asset-grid .val { color: var(--text); }
+@media (max-width: 720px) {
+  .wo-asset-grid { grid-template-columns: 1fr 1fr; }
+  .li-table thead { display: none; }
+  .li-table tbody td { display: block; padding: 2px 0; }
+  .li-table tbody tr { display: block; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .li-table .li-line-total { text-align: left; padding-right: 0; }
+}
 </style>
 </head>
 <body>
@@ -635,14 +669,134 @@
         </div>
       </div>
       <div class="field-row">
-        <label>Assignee</label>
-        <input id="wof-assignee" type="text" />
-      </div>
+  <label>Assignee</label>
+  <input id="wof-assignee" type="text" />
+</div>
+
+<!-- ============ Ticket 8: Customer / Asset / Work Type ============ -->
+<div class="field-row">
+  <label>Customer</label>
+  <input id="wof-customer" type="text" placeholder="e.g. Acme Corp" />
+</div>
+
+<div class="field-row">
+  <label>Type of Work</label>
+  <select id="wof-work-type">
+    <option value="">— select —</option>
+    <option value="repair">Repair</option>
+    <option value="install">Install</option>
+    <option value="maintenance">Maintenance</option>
+    <option value="inspection">Inspection</option>
+  </select>
+</div>
+
+<div class="wo-section">
+  <div class="wo-section-head"><h4>Asset</h4></div>
+  <div class="field-row field-row-2col">
+    <div>
+      <label>Asset name</label>
+      <input id="wof-asset-name" type="text" placeholder="e.g. Front loader" />
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" data-close="wo-form-modal">Cancel</button>
-      <button class="btn" id="wof-save">Save</button>
+    <div>
+      <label>Unit #</label>
+      <input id="wof-asset-unit" type="text" />
     </div>
+  </div>
+  <div class="field-row field-row-2col">
+    <div>
+      <label>Serial #</label>
+      <input id="wof-asset-serial" type="text" />
+    </div>
+    <div>
+      <label>Hours (at time of WO)</label>
+      <input id="wof-asset-hours" type="number" step="0.1" min="0" />
+    </div>
+  </div>
+  <div class="field-row field-row-2col">
+    <div>
+      <label>Make</label>
+      <input id="wof-asset-make" type="text" />
+    </div>
+    <div>
+      <label>Model</label>
+      <input id="wof-asset-model" type="text" />
+    </div>
+  </div>
+</div>
+
+<!-- ============ Parts ============ -->
+<div class="wo-section">
+  <div class="wo-section-head">
+    <h4>Parts</h4>
+    <button type="button" class="btn btn-secondary wo-section-add" id="wof-add-part">+ Add part</button>
+  </div>
+  <table class="li-table">
+    <thead>
+      <tr>
+        <th style="width:130px;">Part #</th>
+        <th>Description</th>
+        <th style="width:70px;">Qty</th>
+        <th style="width:90px;">Unit Cost</th>
+        <th style="width:100px;">Line Total</th>
+        <th style="width:32px;"></th>
+      </tr>
+    </thead>
+    <tbody id="wof-parts-body"></tbody>
+  </table>
+</div>
+
+<!-- ============ Labor ============ -->
+<div class="wo-section">
+  <div class="wo-section-head">
+    <h4>Labor</h4>
+    <button type="button" class="btn btn-secondary wo-section-add" id="wof-add-labor">+ Add labor</button>
+  </div>
+  <table class="li-table">
+    <thead>
+      <tr>
+        <th>Technician</th>
+        <th style="width:140px;">Date</th>
+        <th style="width:70px;">Hours</th>
+        <th style="width:90px;">Rate (CAD/h)</th>
+        <th style="width:100px;">Line Total</th>
+        <th style="width:32px;"></th>
+      </tr>
+    </thead>
+    <tbody id="wof-labor-body"></tbody>
+  </table>
+</div>
+
+<!-- ============ Other Costs ============ -->
+<div class="wo-section">
+  <div class="wo-section-head">
+    <h4>Other Costs</h4>
+    <button type="button" class="btn btn-secondary wo-section-add" id="wof-add-other">+ Add cost</button>
+  </div>
+  <table class="li-table">
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th style="width:120px;">Amount (CAD)</th>
+        <th style="width:32px;"></th>
+      </tr>
+    </thead>
+    <tbody id="wof-other-body"></tbody>
+  </table>
+</div>
+
+<!-- ============ Totals ============ -->
+<div class="totals-card" id="wof-totals">
+  <div class="totals-row"><span class="totals-label">Parts</span><span id="wof-total-parts">$0.00</span></div>
+  <div class="totals-row"><span class="totals-label">Labor</span><span id="wof-total-labor">$0.00</span></div>
+  <div class="totals-row"><span class="totals-label">Other</span><span id="wof-total-other">$0.00</span></div>
+  <div class="totals-row totals-grand"><span>Grand Total (CAD)</span><span id="wof-total-grand">$0.00</span></div>
+</div>
+
+</div>
+<div class="modal-footer">
+  <button class="btn btn-secondary" data-close="wo-form-modal">Cancel</button>
+  <button class="btn" id="wof-save">Save</button>
+</div>
   </div>
 </div>
 
@@ -904,6 +1058,140 @@
 <!-- ===== PART A2 END ===== -->
 <!-- ===== PART B2 START ===== -->
   // ===== Work Orders list =====
+  // ===== Ticket 8: WO form line-item state + helpers =====
+const woFormEdit = {
+  parts: [],
+  labor: [],
+  otherCosts: [],
+};
+
+const fmtCAD = (n) => {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return '$0.00';
+  return '$' + v.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+const numOrZero = (v) => {
+  const x = Number(v);
+  return Number.isFinite(x) ? x : 0;
+};
+const round2 = (x) => Math.round(x * 100) / 100;
+const newRowId = () => 'r_' + Math.random().toString(36).slice(2, 9);
+
+function recomputeWofTotals() {
+  let parts = 0, labor = 0, other = 0;
+  woFormEdit.parts.forEach(p => { p.lineTotal = round2(numOrZero(p.quantity) * numOrZero(p.unitCost)); parts += p.lineTotal; });
+  woFormEdit.labor.forEach(l => { l.lineTotal = round2(numOrZero(l.hours) * numOrZero(l.hourlyRate)); labor += l.lineTotal; });
+  woFormEdit.otherCosts.forEach(o => { other += numOrZero(o.amount); });
+  parts = round2(parts); labor = round2(labor); other = round2(other);
+  $('#wof-total-parts').textContent = fmtCAD(parts);
+  $('#wof-total-labor').textContent = fmtCAD(labor);
+  $('#wof-total-other').textContent = fmtCAD(other);
+  $('#wof-total-grand').textContent = fmtCAD(parts + labor + other);
+}
+
+function bindRowInput(input, row, key, opts) {
+  opts = opts || {};
+  input.addEventListener('input', () => {
+    let v = input.value;
+    if (opts.numeric) v = v === '' ? 0 : numOrZero(v);
+    row[key] = v;
+    if (opts.recalc) {
+      recomputeWofTotals();
+      // Update just this row's line-total cell without full re-render
+      const tr = input.closest('tr');
+      if (tr) {
+        const lt = tr.querySelector('.li-line-total');
+        if (lt) lt.textContent = fmtCAD(row.lineTotal != null ? row.lineTotal : 0);
+      }
+    }
+  });
+}
+
+function renderWofParts() {
+  const body = $('#wof-parts-body');
+  body.innerHTML = '';
+  if (!woFormEdit.parts.length) {
+    body.appendChild(el('tr', { class: 'li-empty' }, el('td', { colspan: 6 }, 'No parts. Click "+ Add part" to add one.')));
+    return;
+  }
+  woFormEdit.parts.forEach(p => {
+    const tr = el('tr');
+    const partNumInp = el('input', { type: 'text' }); partNumInp.value = p.partNumber || ''; bindRowInput(partNumInp, p, 'partNumber');
+    const descInp = el('input', { type: 'text' }); descInp.value = p.description || ''; bindRowInput(descInp, p, 'description');
+    const qtyInp = el('input', { type: 'number', step: '0.01', min: '0' }); qtyInp.value = p.quantity || ''; bindRowInput(qtyInp, p, 'quantity', { numeric: true, recalc: true });
+    const costInp = el('input', { type: 'number', step: '0.01', min: '0' }); costInp.value = p.unitCost || ''; bindRowInput(costInp, p, 'unitCost', { numeric: true, recalc: true });
+    const ltCell = el('td', { class: 'li-line-total' }, fmtCAD(p.lineTotal || 0));
+    const removeBtn = el('button', { type: 'button', class: 'li-remove', onclick: () => { woFormEdit.parts = woFormEdit.parts.filter(x => x.id !== p.id); renderWofParts(); recomputeWofTotals(); } }, '✕');
+    tr.appendChild(el('td', {}, partNumInp));
+    tr.appendChild(el('td', {}, descInp));
+    tr.appendChild(el('td', { class: 'li-num' }, qtyInp));
+    tr.appendChild(el('td', { class: 'li-num' }, costInp));
+    tr.appendChild(ltCell);
+    tr.appendChild(el('td', {}, removeBtn));
+    body.appendChild(tr);
+  });
+}
+
+function renderWofLabor() {
+  const body = $('#wof-labor-body');
+  body.innerHTML = '';
+  if (!woFormEdit.labor.length) {
+    body.appendChild(el('tr', { class: 'li-empty' }, el('td', { colspan: 6 }, 'No labor. Click "+ Add labor" to add an entry.')));
+    return;
+  }
+  woFormEdit.labor.forEach(l => {
+    const tr = el('tr');
+    const techInp = el('input', { type: 'text' }); techInp.value = l.technician || ''; bindRowInput(techInp, l, 'technician');
+    const dateInp = el('input', { type: 'date' }); dateInp.value = l.date || ''; bindRowInput(dateInp, l, 'date');
+    const hrsInp = el('input', { type: 'number', step: '0.25', min: '0' }); hrsInp.value = l.hours || ''; bindRowInput(hrsInp, l, 'hours', { numeric: true, recalc: true });
+    const rateInp = el('input', { type: 'number', step: '0.01', min: '0' }); rateInp.value = l.hourlyRate || ''; bindRowInput(rateInp, l, 'hourlyRate', { numeric: true, recalc: true });
+    const ltCell = el('td', { class: 'li-line-total' }, fmtCAD(l.lineTotal || 0));
+    const removeBtn = el('button', { type: 'button', class: 'li-remove', onclick: () => { woFormEdit.labor = woFormEdit.labor.filter(x => x.id !== l.id); renderWofLabor(); recomputeWofTotals(); } }, '✕');
+    tr.appendChild(el('td', {}, techInp));
+    tr.appendChild(el('td', {}, dateInp));
+    tr.appendChild(el('td', { class: 'li-num' }, hrsInp));
+    tr.appendChild(el('td', { class: 'li-num' }, rateInp));
+    tr.appendChild(ltCell);
+    tr.appendChild(el('td', {}, removeBtn));
+    body.appendChild(tr);
+  });
+}
+
+function renderWofOther() {
+  const body = $('#wof-other-body');
+  body.innerHTML = '';
+  if (!woFormEdit.otherCosts.length) {
+    body.appendChild(el('tr', { class: 'li-empty' }, el('td', { colspan: 3 }, 'No other costs. Click "+ Add cost" to add one.')));
+    return;
+  }
+  woFormEdit.otherCosts.forEach(o => {
+    const tr = el('tr');
+    const descInp = el('input', { type: 'text' }); descInp.value = o.description || ''; bindRowInput(descInp, o, 'description');
+    const amtInp = el('input', { type: 'number', step: '0.01', min: '0' }); amtInp.value = o.amount || ''; bindRowInput(amtInp, o, 'amount', { numeric: true, recalc: true });
+    const removeBtn = el('button', { type: 'button', class: 'li-remove', onclick: () => { woFormEdit.otherCosts = woFormEdit.otherCosts.filter(x => x.id !== o.id); renderWofOther(); recomputeWofTotals(); } }, '✕');
+    tr.appendChild(el('td', {}, descInp));
+    tr.appendChild(el('td', { class: 'li-num' }, amtInp));
+    tr.appendChild(el('td', {}, removeBtn));
+    body.appendChild(tr);
+  });
+}
+
+// + Add row buttons (wired once at module load)
+$('#wof-add-part').addEventListener('click', () => {
+  woFormEdit.parts.push({ id: newRowId(), partNumber: '', description: '', quantity: 0, unitCost: 0, lineTotal: 0 });
+  renderWofParts();
+  recomputeWofTotals();
+});
+$('#wof-add-labor').addEventListener('click', () => {
+  woFormEdit.labor.push({ id: newRowId(), technician: '', date: '', hours: 0, hourlyRate: 0, lineTotal: 0 });
+  renderWofLabor();
+  recomputeWofTotals();
+});
+$('#wof-add-other').addEventListener('click', () => {
+  woFormEdit.otherCosts.push({ id: newRowId(), description: '', amount: 0 });
+  renderWofOther();
+  recomputeWofTotals();
+});
   function renderWorkOrders() {
     const list = $('#wo-list');
     list.innerHTML = '';
@@ -929,42 +1217,99 @@
   }
 
   // ===== WO form (no <form>, button-driven) =====
-  function openWoForm(wo) {
-    state.editingWoId = wo ? wo.id : null;
-    $('#wo-form-title').textContent = wo ? 'Edit Work Order' : 'New Work Order';
-    $('#wof-title').value = wo ? (wo.title || '') : '';
-    $('#wof-desc').value = wo ? (wo.description || '') : '';
-    $('#wof-status').value = wo ? (wo.status || 'open') : 'open';
-    $('#wof-priority').value = wo ? (wo.priority || 'medium') : 'medium';
-    $('#wof-assignee').value = wo ? (wo.assignee || '') : '';
-    openModal('wo-form-modal');
-    setTimeout(() => $('#wof-title').focus(), 50);
-  }
+function openWoForm(wo) {
+  state.editingWoId = wo ? wo.id : null;
+  $('#wo-form-title').textContent = wo ? 'Edit Work Order' : 'New Work Order';
+  $('#wof-title').value = wo ? (wo.title || '') : '';
+  $('#wof-desc').value = wo ? (wo.description || '') : '';
+  $('#wof-status').value = wo ? (wo.status || 'open') : 'open';
+  $('#wof-priority').value = wo ? (wo.priority || 'medium') : 'medium';
+  $('#wof-assignee').value = wo ? (wo.assignee || '') : '';
+
+  // Ticket 8: customer / work type / asset
+  $('#wof-customer').value = wo ? (wo.customerName || '') : '';
+  $('#wof-work-type').value = wo ? (wo.workType || '') : '';
+  const a = (wo && wo.asset) || {};
+  $('#wof-asset-name').value = a.name || '';
+  $('#wof-asset-unit').value = a.unitNumber || '';
+  $('#wof-asset-serial').value = a.serialNumber || '';
+  $('#wof-asset-hours').value = a.hours == null ? '' : a.hours;
+  $('#wof-asset-make').value = a.make || '';
+  $('#wof-asset-model').value = a.model || '';
+
+  // Ticket 8: seed editable line-item arrays (deep clone so we don't mutate state directly)
+  woFormEdit.parts = wo && Array.isArray(wo.parts) ? wo.parts.map(p => ({ ...p })) : [];
+  woFormEdit.labor = wo && Array.isArray(wo.labor) ? wo.labor.map(l => ({ ...l })) : [];
+  woFormEdit.otherCosts = wo && Array.isArray(wo.otherCosts) ? wo.otherCosts.map(o => ({ ...o })) : [];
+  // Ensure each row has an id (older data might not)
+  woFormEdit.parts.forEach(p => { if (!p.id) p.id = newRowId(); });
+  woFormEdit.labor.forEach(l => { if (!l.id) l.id = newRowId(); });
+  woFormEdit.otherCosts.forEach(o => { if (!o.id) o.id = newRowId(); });
+
+  renderWofParts();
+  renderWofLabor();
+  renderWofOther();
+  recomputeWofTotals();
+
+  openModal('wo-form-modal');
+  setTimeout(() => $('#wof-title').focus(), 50);
+}
 
   $('#new-wo-btn').addEventListener('click', () => openWoForm(null));
 
   $('#wof-save').addEventListener('click', async () => {
-    const payload = {
-      title: $('#wof-title').value.trim(),
-      description: $('#wof-desc').value.trim(),
-      status: $('#wof-status').value,
-      priority: $('#wof-priority').value,
-      assignee: $('#wof-assignee').value.trim(),
-    };
-    if (!payload.title) { alert('Title is required'); return; }
-    try {
-      if (state.editingWoId) {
-        await apiFetch(`/api/workorders/${state.editingWoId}`, { method: 'PUT', body: JSON.stringify(payload) });
-      } else {
-        await apiFetch('/api/workorders', { method: 'POST', body: JSON.stringify(payload) });
-      }
-      closeModal('wo-form-modal');
-      state.editingWoId = null;
-      await refreshAll();
-    } catch (err) {
-      alert('Save failed: ' + err.message);
+  const hoursStr = $('#wof-asset-hours').value;
+  const payload = {
+    title: $('#wof-title').value.trim(),
+    description: $('#wof-desc').value.trim(),
+    status: $('#wof-status').value,
+    priority: $('#wof-priority').value,
+    assignee: $('#wof-assignee').value.trim(),
+    // Ticket 8 fields
+    customerName: $('#wof-customer').value.trim(),
+    workType: $('#wof-work-type').value,
+    asset: {
+      name: $('#wof-asset-name').value.trim(),
+      unitNumber: $('#wof-asset-unit').value.trim(),
+      serialNumber: $('#wof-asset-serial').value.trim(),
+      hours: hoursStr === '' ? null : numOrZero(hoursStr),
+      make: $('#wof-asset-make').value.trim(),
+      model: $('#wof-asset-model').value.trim(),
+    },
+    parts: woFormEdit.parts.map(p => ({
+      id: p.id,
+      partNumber: p.partNumber || '',
+      description: p.description || '',
+      quantity: numOrZero(p.quantity),
+      unitCost: numOrZero(p.unitCost),
+    })),
+    labor: woFormEdit.labor.map(l => ({
+      id: l.id,
+      technician: l.technician || '',
+      date: l.date || '',
+      hours: numOrZero(l.hours),
+      hourlyRate: numOrZero(l.hourlyRate),
+    })),
+    otherCosts: woFormEdit.otherCosts.map(o => ({
+      id: o.id,
+      description: o.description || '',
+      amount: numOrZero(o.amount),
+    })),
+  };
+  if (!payload.title) { alert('Title is required'); return; }
+  try {
+    if (state.editingWoId) {
+      await apiFetch(`/api/workorders/${state.editingWoId}`, { method: 'PUT', body: JSON.stringify(payload) });
+    } else {
+      await apiFetch('/api/workorders', { method: 'POST', body: JSON.stringify(payload) });
     }
-  });
+    closeModal('wo-form-modal');
+    state.editingWoId = null;
+    await refreshAll();
+  } catch (err) {
+    alert('Save failed: ' + err.message);
+  }
+});
 
   // ===== WO detail =====
   async function openWorkOrder(id) {
@@ -977,32 +1322,146 @@
   }
 
   function renderWorkOrderDetail() {
-    const wo = state.activeWO;
-    if (!wo) return;
-    $('#wod-title').textContent = wo.title || '(untitled)';
-    const body = $('#wod-body');
-    body.innerHTML = '';
-    body.appendChild(el('div', { class: 'wo-meta' },
-      el('span', { class: `pill priority-${wo.priority || 'medium'}` }, wo.priority || 'medium'),
-      el('span', {}, `Status: ${wo.status || 'open'}`),
-      el('span', {}, `Assignee: ${wo.assignee || '—'}`),
-      el('span', {}, `Created: ${fmtDate(wo.createdAt)}`),
-    ));
-    if (wo.description) body.appendChild(el('p', { class: 'wo-desc' }, wo.description));
+  const wo = state.activeWO;
+  if (!wo) return;
+  $('#wod-title').textContent = wo.title || '(untitled)';
+  const body = $('#wod-body');
+  body.innerHTML = '';
 
-    body.appendChild(el('div', { class: 'detail-actions' },
-      el('button', { class: 'btn btn-secondary btn-sm', onclick: () => openAttachModal(wo.id) }, '+ Attach Procedure'),
-    ));
+  // ---- Header meta ----
+  const metaBits = [
+    el('span', { class: `pill priority-${wo.priority || 'medium'}` }, wo.priority || 'medium'),
+    el('span', {}, `Status: ${wo.status || 'open'}`),
+    el('span', {}, `Assignee: ${wo.assignee || '—'}`),
+    el('span', {}, `Created: ${fmtDate(wo.createdAt)}`),
+  ];
+  if (wo.workType) metaBits.push(el('span', {}, `Type: ${wo.workType}`));
+  if (wo.customerName) metaBits.push(el('span', {}, `Customer: ${wo.customerName}`));
+  body.appendChild(el('div', { class: 'wo-meta' }, ...metaBits));
 
-    const procWrap = el('div', { class: 'attached-procs' });
-    body.appendChild(procWrap);
-    const attached = wo.procedures || [];
-    if (!attached.length) {
-      procWrap.appendChild(el('div', { class: 'empty' }, 'No procedures attached.'));
-    } else {
-      attached.forEach(inst => procWrap.appendChild(renderProcedureInstance(wo, inst)));
-    }
+  if (wo.description) body.appendChild(el('p', { class: 'wo-desc' }, wo.description));
+
+  // ---- Asset section ----
+  const a = wo.asset || {};
+  const hasAsset = a.name || a.serialNumber || a.unitNumber || a.hours != null || a.make || a.model;
+  if (hasAsset) {
+    const assetSec = el('div', { class: 'wo-section' });
+    assetSec.appendChild(el('div', { class: 'wo-section-head' }, el('h4', {}, 'Asset')));
+    const grid = el('div', { class: 'wo-asset-grid' });
+    const cell = (label, val) => {
+      grid.appendChild(el('div', {},
+        el('div', { class: 'label' }, label),
+        el('div', { class: 'val' }, val || '—'),
+      ));
+    };
+    cell('Name', a.name);
+    cell('Unit #', a.unitNumber);
+    cell('Serial #', a.serialNumber);
+    cell('Hours', a.hours == null || a.hours === '' ? '—' : String(a.hours));
+    cell('Make', a.make);
+    cell('Model', a.model);
+    assetSec.appendChild(grid);
+    body.appendChild(assetSec);
   }
+
+  // ---- Parts table (read-only) ----
+  const parts = wo.parts || [];
+  if (parts.length) {
+    const sec = el('div', { class: 'wo-section' });
+    sec.appendChild(el('div', { class: 'wo-section-head' }, el('h4', {}, 'Parts')));
+    const t = el('table', { class: 'li-readonly' });
+    const thead = el('thead'); const trh = el('tr');
+    ['Part #', 'Description', 'Qty', 'Unit Cost', 'Line Total'].forEach((h, i) => {
+      trh.appendChild(el('th', { class: i >= 2 ? 'li-num' : '' }, h));
+    });
+    thead.appendChild(trh); t.appendChild(thead);
+    const tb = el('tbody');
+    parts.forEach(p => {
+      const tr = el('tr');
+      tr.appendChild(el('td', {}, p.partNumber || '—'));
+      tr.appendChild(el('td', {}, p.description || '—'));
+      tr.appendChild(el('td', { class: 'li-num' }, String(p.quantity ?? 0)));
+      tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(p.unitCost)));
+      tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(p.lineTotal)));
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb); sec.appendChild(t);
+    body.appendChild(sec);
+  }
+
+  // ---- Labor table (read-only) ----
+  const labor = wo.labor || [];
+  if (labor.length) {
+    const sec = el('div', { class: 'wo-section' });
+    sec.appendChild(el('div', { class: 'wo-section-head' }, el('h4', {}, 'Labor')));
+    const t = el('table', { class: 'li-readonly' });
+    const thead = el('thead'); const trh = el('tr');
+    ['Technician', 'Date', 'Hours', 'Rate', 'Line Total'].forEach((h, i) => {
+      trh.appendChild(el('th', { class: i >= 2 ? 'li-num' : '' }, h));
+    });
+    thead.appendChild(trh); t.appendChild(thead);
+    const tb = el('tbody');
+    labor.forEach(l => {
+      const tr = el('tr');
+      tr.appendChild(el('td', {}, l.technician || '—'));
+      tr.appendChild(el('td', {}, l.date || '—'));
+      tr.appendChild(el('td', { class: 'li-num' }, String(l.hours ?? 0)));
+      tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(l.hourlyRate)));
+      tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(l.lineTotal)));
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb); sec.appendChild(t);
+    body.appendChild(sec);
+  }
+
+  // ---- Other Costs table (read-only) ----
+  const other = wo.otherCosts || [];
+  if (other.length) {
+    const sec = el('div', { class: 'wo-section' });
+    sec.appendChild(el('div', { class: 'wo-section-head' }, el('h4', {}, 'Other Costs')));
+    const t = el('table', { class: 'li-readonly' });
+    const thead = el('thead'); const trh = el('tr');
+    ['Description', 'Amount'].forEach((h, i) => {
+      trh.appendChild(el('th', { class: i === 1 ? 'li-num' : '' }, h));
+    });
+    thead.appendChild(trh); t.appendChild(thead);
+    const tb = el('tbody');
+    other.forEach(o => {
+      const tr = el('tr');
+      tr.appendChild(el('td', {}, o.description || '—'));
+      tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(o.amount)));
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb); sec.appendChild(t);
+    body.appendChild(sec);
+  }
+
+  // ---- Totals card ----
+  const totals = wo.totals || { parts: 0, labor: 0, other: 0, grand: 0 };
+  const hasMoney = (parts.length + labor.length + other.length) > 0 || totals.grand > 0;
+  if (hasMoney) {
+    const card = el('div', { class: 'totals-card' },
+      el('div', { class: 'totals-row' }, el('span', { class: 'totals-label' }, 'Parts'), el('span', {}, fmtCAD(totals.parts))),
+      el('div', { class: 'totals-row' }, el('span', { class: 'totals-label' }, 'Labor'), el('span', {}, fmtCAD(totals.labor))),
+      el('div', { class: 'totals-row' }, el('span', { class: 'totals-label' }, 'Other'), el('span', {}, fmtCAD(totals.other))),
+      el('div', { class: 'totals-row totals-grand' }, el('span', {}, 'Grand Total (CAD)'), el('span', {}, fmtCAD(totals.grand))),
+    );
+    body.appendChild(card);
+  }
+
+  // ---- Procedures (existing) ----
+  body.appendChild(el('div', { class: 'detail-actions' },
+    el('button', { class: 'btn btn-secondary btn-sm', onclick: () => openAttachModal(wo.id) }, '+ Attach Procedure'),
+  ));
+  const procWrap = el('div', { class: 'attached-procs' });
+  body.appendChild(procWrap);
+  const attached = wo.procedures || [];
+  if (!attached.length) {
+    procWrap.appendChild(el('div', { class: 'empty' }, 'No procedures attached.'));
+  } else {
+    attached.forEach(inst => procWrap.appendChild(renderProcedureInstance(wo, inst)));
+  }
+}
 
   // Footer Edit / Delete buttons (wired once, read state.activeWO each click)
   $('#wod-edit').addEventListener('click', () => {
