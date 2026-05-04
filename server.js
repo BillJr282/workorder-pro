@@ -1,7 +1,8 @@
+// ===== PART 1 START =====
 // server.js — WorkOrder Pro
 // Express + uuid + flat-file JSON storage (data.json)
-// Routes: /api/workorders (CRUD), /api/procedures (CRUD),
-//         attach/detach procedures to work orders, PATCH responses
+// Routes: /api/workorders, /api/procedures (CRUD), AI generator,
+//         AI assistant with tool use
 
 const express = require("express");
 const path = require("path");
@@ -24,10 +25,8 @@ function loadData() {
   } catch (e) {
     data = {};
   }
-  // Backfill shape
   if (!Array.isArray(data.workorders)) data.workorders = [];
   if (!Array.isArray(data.procedures)) data.procedures = [];
-  // Backfill per-workorder fields
   data.workorders.forEach((w) => {
     if (!Array.isArray(w.procedures)) w.procedures = [];
     if (!Array.isArray(w.activity)) w.activity = [];
@@ -41,11 +40,7 @@ function saveData(data) {
 
 function logActivity(wo, message) {
   wo.activity = wo.activity || [];
-  wo.activity.push({
-    id: uuidv4(),
-    at: new Date().toISOString(),
-    message,
-  });
+  wo.activity.push({ id: uuidv4(), at: new Date().toISOString(), message });
 }
 
 // ---------- Health ----------
@@ -115,10 +110,17 @@ app.delete("/api/workorders/:id", (req, res) => {
   res.json({ ok: true, removed });
 });
 
-// ---------- Procedures (NEW) ----------
-// A procedure is a reusable template:
-// { id, name, description, fields: [{id, type, label, required, options?}], createdAt, updatedAt }
-// Field types: "checkbox", "text", "number", "passfail"
+// ---------- Procedures ----------
+const ALLOWED_FIELD_TYPES = ["checkbox", "text", "number", "passfail", "date", "signature", "photo"];
+
+function normalizeField(f) {
+  return {
+    id: f.id || uuidv4(),
+    type: ALLOWED_FIELD_TYPES.includes(f.type) ? f.type : "text",
+    label: f.label || "Untitled field",
+    required: !!f.required,
+  };
+}
 
 app.get("/api/procedures", (req, res) => {
   const data = loadData();
@@ -156,9 +158,7 @@ app.put("/api/procedures/:id", (req, res) => {
   const { name, description, fields } = req.body || {};
   if (name !== undefined) p.name = name;
   if (description !== undefined) p.description = description;
-  if (fields !== undefined && Array.isArray(fields)) {
-    p.fields = fields.map(normalizeField);
-  }
+  if (fields !== undefined && Array.isArray(fields)) p.fields = fields.map(normalizeField);
   p.updatedAt = new Date().toISOString();
   saveData(data);
   res.json(p);
@@ -173,20 +173,6 @@ app.delete("/api/procedures/:id", (req, res) => {
   res.json({ ok: true, removed });
 });
 
-function normalizeField(f) {
-  const allowed = ["checkbox", "text", "number", "passfail", "date", "signature", "photo"];
-  return {
-    id: f.id || uuidv4(),
-    type: allowed.includes(f.type) ? f.type : "text",
-    label: f.label || "Untitled field",
-    required: !!f.required,
-  };
-}
-
-// ---------- Attach / Detach procedures to work orders ----------
-// POST /api/workorders/:id/procedures  body: { procedureId }
-// Snapshots the procedure structure onto the WO at attach time.
-
 app.post("/api/workorders/:id/procedures", (req, res) => {
   const data = loadData();
   const wo = data.workorders.find((w) => w.id === req.params.id);
@@ -194,15 +180,14 @@ app.post("/api/workorders/:id/procedures", (req, res) => {
   const { procedureId } = req.body || {};
   const p = data.procedures.find((x) => x.id === procedureId);
   if (!p) return res.status(404).json({ error: "Procedure not found" });
-
   const instance = {
     instanceId: uuidv4(),
     procedureId: p.id,
     name: p.name,
     description: p.description,
-    fields: p.fields.map((f) => ({ ...f })), // snapshot
-    responses: {}, // fieldId -> value
-    status: "in_progress", // in_progress | complete
+    fields: p.fields.map((f) => ({ ...f })),
+    responses: {},
+    status: "in_progress",
     attachedAt: new Date().toISOString(),
     completedAt: null,
   };
@@ -226,15 +211,12 @@ app.delete("/api/workorders/:id/procedures/:instanceId", (req, res) => {
   res.json({ ok: true, removed });
 });
 
-// PATCH responses for a procedure instance (debounced from client)
-// body: { responses: { fieldId: value, ... }, status?: "in_progress"|"complete" }
 app.patch("/api/workorders/:id/procedures/:instanceId", (req, res) => {
   const data = loadData();
   const wo = data.workorders.find((w) => w.id === req.params.id);
   if (!wo) return res.status(404).json({ error: "Work order not found" });
   const inst = wo.procedures.find((p) => p.instanceId === req.params.instanceId);
   if (!inst) return res.status(404).json({ error: "Procedure instance not found" });
-
   const { responses, status } = req.body || {};
   if (responses && typeof responses === "object") {
     inst.responses = { ...inst.responses, ...responses };
@@ -254,10 +236,11 @@ app.patch("/api/workorders/:id/procedures/:instanceId", (req, res) => {
   saveData(data);
   res.json(inst);
 });
-// ---------- AI Procedure Generator ----------
-const ALLOWED_FIELD_TYPES = ["checkbox", "text", "number", "passfail", "date", "signature", "photo"];
+// ===== PART 1 END =====
+// ===== PART 2 START =====
 
-const AI_SYSTEM_PROMPT = `You are an expert in industrial maintenance, safety inspections, and equipment service procedures. You design checklist-style procedures used by technicians.
+// ---------- AI: Procedure Generator (existing) ----------
+const AI_PROCEDURE_SYSTEM_PROMPT = `You are an expert in industrial maintenance, safety inspections, and equipment service procedures. You design checklist-style procedures used by technicians.
 
 When given a description of a procedure to create, respond with ONLY a single JSON object (no prose, no markdown fences) with this exact shape:
 
@@ -271,34 +254,22 @@ When given a description of a procedure to create, respond with ONLY a single JS
 
 Rules:
 - Choose the most appropriate field type for each step:
-  * "checkbox" for simple yes/done items ("Wear safety glasses", "Wheel chocks placed")
-  * "passfail" for inspection items that can pass or fail ("Brake pedal firmness", "Hydraulic hose condition")
-  * "number" for measurements and counts ("Tire pressure (PSI)", "Engine hours", "Oil level")
-  * "text" for short free-form notes ("Notes", "Observed defects", "Operator name")
-  * "date" for dates ("Last service date", "Inspection date")
-  * "signature" for sign-offs (typically 1-2 at the end: "Technician signature", "Supervisor signature")
-  * "photo" for visual evidence ("Photo of damage", "Before photo", "After photo")
+  * "checkbox" for simple yes/done items
+  * "passfail" for inspection items that can pass or fail
+  * "number" for measurements and counts
+  * "text" for short free-form notes
+  * "date" for dates
+  * "signature" for sign-offs (typically 1-2 at the end)
+  * "photo" for visual evidence
 - Mark "required: true" for safety-critical items and any signature fields. Otherwise required: false.
 - Aim for 8-20 fields total. Order them logically (pre-checks → main inspection → measurements → sign-off).
-- Be specific and industry-realistic. Use real maintenance/inspection terminology.
-- Output ONLY the JSON object. No explanation, no code fences.`;
+- Be specific and industry-realistic. Output ONLY the JSON object.`;
 
-app.post("/api/procedures/generate", async (req, res) => {
+async function callAnthropic(body, timeoutMs = 30000) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured on the server" });
-  }
-  const { prompt } = req.body || {};
-  if (!prompt || typeof prompt !== "string") {
-    return res.status(400).json({ error: "prompt (string) required" });
-  }
-  if (prompt.length > 1000) {
-    return res.status(400).json({ error: "prompt too long (max 1000 chars)" });
-  }
-
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured on the server");
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
-
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -307,39 +278,42 @@ app.post("/api/procedures/generate", async (req, res) => {
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
       },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5",
-        max_tokens: 2048,
-        system: AI_SYSTEM_PROMPT,
-        messages: [{ role: "user", content: "Create a procedure for: " + prompt }],
-      }),
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
-
     if (!r.ok) {
       const errText = await r.text();
-      console.error("Anthropic API error", r.status, errText);
-      return res.status(502).json({ error: "AI provider error: " + r.status });
+      throw new Error("Anthropic " + r.status + ": " + errText.slice(0, 200));
     }
+    return await r.json();
+  } catch (e) {
+    clearTimeout(timeoutId);
+    throw e;
+  }
+}
 
-    const data = await r.json();
+app.post("/api/procedures/generate", async (req, res) => {
+  const { prompt } = req.body || {};
+  if (!prompt || typeof prompt !== "string") return res.status(400).json({ error: "prompt (string) required" });
+  if (prompt.length > 1000) return res.status(400).json({ error: "prompt too long (max 1000 chars)" });
+  try {
+    const data = await callAnthropic({
+      model: "claude-haiku-4-5",
+      max_tokens: 2048,
+      system: AI_PROCEDURE_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: "Create a procedure for: " + prompt }],
+    });
     const text = (data.content && data.content[0] && data.content[0].text) || "";
-
-    // Extract JSON (handle accidental code fences just in case)
     let jsonStr = text.trim();
     const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     if (fenceMatch) jsonStr = fenceMatch[1].trim();
-
     let parsed;
-    try {
-      parsed = JSON.parse(jsonStr);
-    } catch (e) {
+    try { parsed = JSON.parse(jsonStr); }
+    catch (e) {
       console.error("Failed to parse AI JSON:", text);
       return res.status(502).json({ error: "AI returned non-JSON response" });
     }
-
-    // Validate + sanitize
     const name = typeof parsed.name === "string" ? parsed.name.slice(0, 100) : "Generated Procedure";
     const description = typeof parsed.description === "string" ? parsed.description.slice(0, 500) : "";
     const rawFields = Array.isArray(parsed.fields) ? parsed.fields : [];
@@ -348,17 +322,418 @@ app.post("/api/procedures/generate", async (req, res) => {
       label: (f && typeof f.label === "string" ? f.label : "Untitled field").slice(0, 200),
       required: !!(f && f.required),
     }));
-
     res.json({ name, description, fields });
   } catch (e) {
-    clearTimeout(timeoutId);
-    if (e.name === "AbortError") {
-      return res.status(504).json({ error: "AI request timed out" });
-    }
     console.error("Generate failed", e);
-    return res.status(500).json({ error: "Generate failed: " + e.message });
+    if (e.name === "AbortError") return res.status(504).json({ error: "AI request timed out" });
+    return res.status(500).json({ error: e.message });
   }
 });
+
+// ---------- AI Assistant (tool use) ----------
+const ASSISTANT_SYSTEM_PROMPT = `You are the WorkOrder Pro AI assistant. You help maintenance technicians and supervisors manage work orders and procedures by calling tools.
+
+GENERAL BEHAVIOR:
+- Be concise. Maintenance staff are busy — short, useful answers, not paragraphs.
+- When the user asks for something actionable, call the appropriate tool. Don't just describe what you would do.
+- When listing items, summarize don't dump. "You have 5 open work orders, 2 high priority. The hydraulic forklift one looks urgent." not a giant table.
+- After completing an action, briefly confirm what was done.
+- If a request is ambiguous (e.g. "delete the work order" but multiple match), ask which one before calling a tool.
+- For destructive actions (delete_work_order, detach_procedure), call the tool — the system will pause for user confirmation automatically.
+
+WORK ORDER FIELDS:
+- status: "open" | "in_progress" | "complete"
+- priority: "low" | "medium" | "high" | "urgent"
+- assignee: free-text name (current users are "bill" and "serina")
+
+PROCEDURES:
+- A procedure is a reusable checklist template with fields (checkbox, text, number, passfail, date, signature, photo).
+- Attaching a procedure to a work order takes a snapshot at that moment.
+- When asked to "create and attach a procedure" for a work order, you may use create_procedure_from_description which creates AND attaches in one step.
+
+Always use real IDs from list/get tools — never invent IDs.`;
+
+// ---------- Tool registry ----------
+// Each tool: { name, description, input_schema, run(input) -> string|object, destructive? }
+const TOOLS = [
+  {
+    name: "list_work_orders",
+    description: "List all work orders. Returns id, title, status, priority, assignee, and number of attached procedures for each.",
+    input_schema: { type: "object", properties: {}, required: [] },
+    run: () => {
+      const data = loadData();
+      return data.workorders.map(w => ({
+        id: w.id, title: w.title, status: w.status, priority: w.priority,
+        assignee: w.assignee, procedureCount: (w.procedures || []).length,
+      }));
+    },
+  },
+  {
+    name: "get_work_order",
+    description: "Get full details of a single work order, including its description, attached procedures, responses, and activity log.",
+    input_schema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
+    run: ({ id }) => {
+      const data = loadData();
+      const w = data.workorders.find(x => x.id === id);
+      if (!w) throw new Error("Work order not found: " + id);
+      return w;
+    },
+  },
+  {
+    name: "create_work_order",
+    description: "Create a new work order. Returns the new work order with its id.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Short title for the work order" },
+        description: { type: "string", description: "Detailed description of the work needed" },
+        status: { type: "string", enum: ["open", "in_progress", "complete"], description: "Defaults to 'open'" },
+        priority: { type: "string", enum: ["low", "medium", "high", "urgent"], description: "Defaults to 'medium'" },
+        assignee: { type: "string", description: "Person assigned. Optional." },
+      },
+      required: ["title"],
+    },
+    run: (input) => {
+      const data = loadData();
+      const wo = {
+        id: uuidv4(),
+        title: input.title,
+        description: input.description || "",
+        status: input.status || "open",
+        priority: input.priority || "medium",
+        assignee: input.assignee || "",
+        procedures: [],
+        activity: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      logActivity(wo, `Work order created via AI assistant: ${wo.title}`);
+      data.workorders.push(wo);
+      saveData(data);
+      return { id: wo.id, title: wo.title, status: wo.status, priority: wo.priority };
+    },
+  },
+  {
+    name: "update_work_order",
+    description: "Update fields on an existing work order. Only include fields you want to change.",
+    input_schema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        title: { type: "string" },
+        description: { type: "string" },
+        status: { type: "string", enum: ["open", "in_progress", "complete"] },
+        priority: { type: "string", enum: ["low", "medium", "high", "urgent"] },
+        assignee: { type: "string" },
+      },
+      required: ["id"],
+    },
+    run: (input) => {
+      const data = loadData();
+      const w = data.workorders.find(x => x.id === input.id);
+      if (!w) throw new Error("Work order not found: " + input.id);
+      const changes = [];
+      ["title", "description", "priority", "assignee"].forEach(k => {
+        if (input[k] !== undefined && input[k] !== w[k]) { changes.push(k); w[k] = input[k]; }
+      });
+      if (input.status !== undefined && input.status !== w.status) {
+        logActivity(w, `Status changed to ${input.status} via AI assistant`);
+        w.status = input.status;
+        changes.push("status");
+      }
+      w.updatedAt = new Date().toISOString();
+      saveData(data);
+      return { id: w.id, changed: changes };
+    },
+  },
+  {
+    name: "delete_work_order",
+    description: "Permanently delete a work order. DESTRUCTIVE — the system will require user confirmation before running.",
+    destructive: true,
+    input_schema: {
+      type: "object",
+      properties: { id: { type: "string" } },
+      required: ["id"],
+    },
+    run: ({ id }) => {
+      const data = loadData();
+      const idx = data.workorders.findIndex(w => w.id === id);
+      if (idx === -1) throw new Error("Work order not found: " + id);
+      const [removed] = data.workorders.splice(idx, 1);
+      saveData(data);
+      return { id: removed.id, title: removed.title, deleted: true };
+    },
+  },
+  {
+    name: "list_procedures",
+    description: "List all procedures in the library. Returns id, name, description, and field count for each.",
+    input_schema: { type: "object", properties: {}, required: [] },
+    run: () => {
+      const data = loadData();
+      return data.procedures.map(p => ({
+        id: p.id, name: p.name, description: p.description, fieldCount: (p.fields || []).length,
+      }));
+    },
+  },
+  {
+    name: "get_procedure",
+    description: "Get full details of a single procedure including its fields.",
+    input_schema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
+    run: ({ id }) => {
+      const data = loadData();
+      const p = data.procedures.find(x => x.id === id);
+      if (!p) throw new Error("Procedure not found: " + id);
+      return p;
+    },
+  },
+  {
+    name: "create_procedure",
+    description: "Create a new procedure template. Use this when the user describes specific fields they want.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        description: { type: "string" },
+        fields: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              type: { type: "string", enum: ALLOWED_FIELD_TYPES },
+              label: { type: "string" },
+              required: { type: "boolean" },
+            },
+            required: ["type", "label"],
+          },
+        },
+      },
+      required: ["name", "fields"],
+    },
+    run: (input) => {
+      const data = loadData();
+      const p = {
+        id: uuidv4(),
+        name: input.name,
+        description: input.description || "",
+        fields: (input.fields || []).map(normalizeField),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      data.procedures.push(p);
+      saveData(data);
+      return { id: p.id, name: p.name, fieldCount: p.fields.length };
+    },
+  },
+  {
+    name: "attach_procedure",
+    description: "Attach an existing procedure from the library to a work order. Snapshots the procedure structure.",
+    input_schema: {
+      type: "object",
+      properties: {
+        workOrderId: { type: "string" },
+        procedureId: { type: "string" },
+      },
+      required: ["workOrderId", "procedureId"],
+    },
+    run: ({ workOrderId, procedureId }) => {
+      const data = loadData();
+      const wo = data.workorders.find(w => w.id === workOrderId);
+      if (!wo) throw new Error("Work order not found: " + workOrderId);
+      const p = data.procedures.find(x => x.id === procedureId);
+      if (!p) throw new Error("Procedure not found: " + procedureId);
+      const instance = {
+        instanceId: uuidv4(),
+        procedureId: p.id,
+        name: p.name,
+        description: p.description,
+        fields: p.fields.map(f => ({ ...f })),
+        responses: {},
+        status: "in_progress",
+        attachedAt: new Date().toISOString(),
+        completedAt: null,
+      };
+      wo.procedures.push(instance);
+      logActivity(wo, `Procedure attached via AI assistant: ${p.name}`);
+      wo.updatedAt = new Date().toISOString();
+      saveData(data);
+      return { instanceId: instance.instanceId, name: instance.name };
+    },
+  },
+  {
+    name: "detach_procedure",
+    description: "Detach a procedure instance from a work order. DESTRUCTIVE — system will require user confirmation.",
+    destructive: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        workOrderId: { type: "string" },
+        instanceId: { type: "string" },
+      },
+      required: ["workOrderId", "instanceId"],
+    },
+    run: ({ workOrderId, instanceId }) => {
+      const data = loadData();
+      const wo = data.workorders.find(w => w.id === workOrderId);
+      if (!wo) throw new Error("Work order not found");
+      const idx = wo.procedures.findIndex(p => p.instanceId === instanceId);
+      if (idx === -1) throw new Error("Procedure instance not found");
+      const [removed] = wo.procedures.splice(idx, 1);
+      logActivity(wo, `Procedure detached via AI assistant: ${removed.name}`);
+      wo.updatedAt = new Date().toISOString();
+      saveData(data);
+      return { detached: removed.name };
+    },
+  },
+  {
+    name: "mark_procedure_complete",
+    description: "Mark a procedure instance as complete or reopen it.",
+    input_schema: {
+      type: "object",
+      properties: {
+        workOrderId: { type: "string" },
+        instanceId: { type: "string" },
+        status: { type: "string", enum: ["complete", "in_progress"] },
+      },
+      required: ["workOrderId", "instanceId", "status"],
+    },
+    run: ({ workOrderId, instanceId, status }) => {
+      const data = loadData();
+      const wo = data.workorders.find(w => w.id === workOrderId);
+      if (!wo) throw new Error("Work order not found");
+      const inst = wo.procedures.find(p => p.instanceId === instanceId);
+      if (!inst) throw new Error("Procedure instance not found");
+      if (status === "complete" && inst.status !== "complete") {
+        inst.completedAt = new Date().toISOString();
+        logActivity(wo, `Procedure completed via AI assistant: ${inst.name}`);
+      }
+      if (status === "in_progress" && inst.status === "complete") {
+        inst.completedAt = null;
+        logActivity(wo, `Procedure reopened via AI assistant: ${inst.name}`);
+      }
+      inst.status = status;
+      wo.updatedAt = new Date().toISOString();
+      saveData(data);
+      return { instanceId, status };
+    },
+  },
+];
+
+const TOOL_BY_NAME = Object.fromEntries(TOOLS.map(t => [t.name, t]));
+const TOOL_DEFS_FOR_API = TOOLS.map(t => ({
+  name: t.name,
+  description: t.description,
+  input_schema: t.input_schema,
+}));
+
+// ---------- /api/assistant ----------
+// Body: { messages: [{role, content}, ...], confirmedToolUseIds?: [string] }
+// Returns: { messages: [...], pendingConfirmations: [{toolUseId, name, input, description}], assistantText: string, toolEvents: [{name, input, result|error}] }
+app.post("/api/assistant", async (req, res) => {
+  const { messages: incoming, confirmedToolUseIds } = req.body || {};
+  if (!Array.isArray(incoming) || !incoming.length) return res.status(400).json({ error: "messages array required" });
+  const confirmed = new Set(Array.isArray(confirmedToolUseIds) ? confirmedToolUseIds : []);
+
+  const messages = JSON.parse(JSON.stringify(incoming)); // local working copy
+  const toolEvents = [];
+  const pendingConfirmations = [];
+
+  const startTs = Date.now();
+  const TIMEOUT_MS = 60_000;
+  const MAX_LOOPS = 8;
+
+  try {
+    for (let loop = 0; loop < MAX_LOOPS; loop++) {
+      if (Date.now() - startTs > TIMEOUT_MS) throw new Error("Assistant turn timed out");
+
+      const apiResp = await callAnthropic({
+        model: "claude-haiku-4-5",
+        max_tokens: 2048,
+        system: ASSISTANT_SYSTEM_PROMPT,
+        tools: TOOL_DEFS_FOR_API,
+        messages,
+      }, 30_000);
+
+      // Append assistant message to history
+      messages.push({ role: "assistant", content: apiResp.content });
+
+      if (apiResp.stop_reason !== "tool_use") {
+        // Done — no more tool calls requested
+        break;
+      }
+
+      // Process each tool_use block
+      const toolUseBlocks = (apiResp.content || []).filter(b => b.type === "tool_use");
+      const toolResults = [];
+      let pausedForConfirmation = false;
+
+      for (const tu of toolUseBlocks) {
+        const tool = TOOL_BY_NAME[tu.name];
+        if (!tool) {
+          toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: "Error: unknown tool " + tu.name, is_error: true });
+          continue;
+        }
+
+        // Destructive tools require explicit confirmation
+        if (tool.destructive && !confirmed.has(tu.id)) {
+          pendingConfirmations.push({
+            toolUseId: tu.id,
+            name: tu.name,
+            input: tu.input,
+            description: tool.description.split(".")[0],
+          });
+          // Tell the model the user must confirm; do not actually execute
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: tu.id,
+            content: "PENDING USER CONFIRMATION. The user will be asked to approve this destructive action before it runs. End your turn now and wait.",
+          });
+          pausedForConfirmation = true;
+          continue;
+        }
+
+        try {
+          const result = tool.run(tu.input || {});
+          toolEvents.push({ name: tu.name, input: tu.input, result });
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: tu.id,
+            content: JSON.stringify(result).slice(0, 8000),
+          });
+        } catch (e) {
+          toolEvents.push({ name: tu.name, input: tu.input, error: e.message });
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: tu.id,
+            content: "Error: " + e.message,
+            is_error: true,
+          });
+        }
+      }
+
+      messages.push({ role: "user", content: toolResults });
+
+      if (pausedForConfirmation) break;
+    }
+
+    // Extract final assistant text
+    let assistantText = "";
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.role === "assistant" && Array.isArray(m.content)) {
+        const textBlocks = m.content.filter(b => b.type === "text").map(b => b.text);
+        if (textBlocks.length) { assistantText = textBlocks.join("\n"); break; }
+      } else if (m.role === "assistant" && typeof m.content === "string") {
+        assistantText = m.content; break;
+      }
+    }
+
+    res.json({ messages, assistantText, toolEvents, pendingConfirmations });
+  } catch (e) {
+    console.error("Assistant error", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ---------- Static files (must come AFTER API routes) ----------
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -366,3 +741,4 @@ app.use(express.static(path.join(__dirname, "public")));
 app.listen(PORT, () => {
   console.log(`WorkOrder Pro listening on ${PORT}`);
 });
+// ===== PART 2 END =====
