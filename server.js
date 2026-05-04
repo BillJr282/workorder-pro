@@ -45,13 +45,6 @@ const DATA_FILE = path.join(DATA_DIR, "data.json");
 
 console.log(`[startup] DATA_FILE = ${DATA_FILE}`);
 
-function loadData() {
-  let data;
-  try {
-    const raw = fs.readFileSync(DATA_FILE, "utf8");
-    data = JSON.parse(raw);
-  } catch (e) {
-    data = {};
   function loadData() {
   let data;
   try {
