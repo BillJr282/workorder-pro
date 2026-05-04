@@ -20,6 +20,7 @@
     --danger: #ef4444;
     --pass: #16a34a;
     --fail: #dc2626;
+    --ai: #8b5cf6;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; height: 100%; }
@@ -74,6 +75,13 @@
     border-radius: 4px;
   }
   .btn-icon:hover { background: var(--panel-2); color: var(--text); }
+  .btn-ai {
+    background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+    color: white;
+    border: none;
+  }
+  .btn-ai:hover { filter: brightness(1.1); }
+  .btn-ai:disabled { opacity: 0.6; cursor: not-allowed; }
 
   /* Login */
   #login-screen {
@@ -297,82 +305,197 @@
   .pf-btn.pass.active { background: var(--pass); border-color: var(--pass); color: white; }
   .pf-btn.fail.active { background: var(--fail); border-color: var(--fail); color: white; }
 
-  /* Signature pad */
-  .sig-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    align-items: flex-end;
-  }
-  .sig-canvas {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    width: 280px;
-    height: 110px;
-    touch-action: none;
-    cursor: crosshair;
-    display: block;
-  }
-  .sig-saved {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    max-width: 280px;
-    max-height: 110px;
-    display: block;
-  }
-  .sig-row {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  }
-
-  /* Photo field */
-  .photo-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    align-items: flex-end;
-  }
-  .photo-thumb {
-    max-width: 200px;
-    max-height: 150px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    cursor: pointer;
-    display: block;
-  }
+  .sig-wrap { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+  .sig-canvas { background: white; border: 1px solid var(--border); border-radius: 6px; width: 280px; height: 110px; touch-action: none; cursor: crosshair; display: block; }
+  .sig-saved { background: white; border: 1px solid var(--border); border-radius: 6px; max-width: 280px; max-height: 110px; display: block; }
+  .sig-row { display: flex; gap: 6px; align-items: center; }
+  .photo-wrap { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+  .photo-thumb { max-width: 200px; max-height: 150px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; display: block; }
   .photo-row { display: flex; gap: 6px; align-items: center; }
   .photo-status { font-size: 11px; color: var(--muted); }
 
-  /* Lightbox */
-  .lightbox {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.9);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 200;
-    cursor: zoom-out;
-    padding: 20px;
-  }
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 200; cursor: zoom-out; padding: 20px; }
   .lightbox.show { display: flex; }
   .lightbox img { max-width: 100%; max-height: 100%; border-radius: 4px; }
 
-  .activity-log {
-    margin-top: 20px;
-    border-top: 1px solid var(--border);
-    padding-top: 14px;
-  }
-  .activity-item {
-    display: flex;
-    gap: 10px;
-    font-size: 12px;
-    color: var(--muted);
-    padding: 4px 0;
-  }
+  .activity-log { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .activity-item { display: flex; gap: 10px; font-size: 12px; color: var(--muted); padding: 4px 0; }
   .activity-time { white-space: nowrap; }
+
+  .ai-panel { background: linear-gradient(135deg, rgba(139,92,246,0.12), rgba(59,130,246,0.12)); border: 1px solid #6366f1; border-radius: 8px; padding: 12px; margin-bottom: 16px; }
+  .ai-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 600; font-size: 13px; }
+  .ai-panel textarea { min-height: 70px; resize: vertical; }
+  .ai-panel-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
+  .ai-status { font-size: 12px; color: var(--muted); margin-top: 6px; min-height: 16px; }
+
+  /* ============ AI ASSISTANT CHAT PANEL ============ */
+  .chat-fab {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+    color: white;
+    border: none;
+    font-size: 24px;
+    box-shadow: 0 4px 16px rgba(139, 92, 246, 0.5);
+    z-index: 90;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s;
+  }
+  .chat-fab:hover { transform: scale(1.05); filter: brightness(1.1); }
+  #app.show-fab .chat-fab { display: flex; }
+
+  .chat-panel {
+    position: fixed;
+    right: -440px;
+    top: 0;
+    bottom: 0;
+    width: 420px;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    z-index: 110;
+    transition: right 0.25s ease;
+    box-shadow: -8px 0 32px rgba(0,0,0,0.4);
+  }
+  .chat-panel.open { right: 0; }
+  .chat-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.15));
+  }
+  .chat-header h3 { margin: 0; font-size: 16px; display: flex; align-items: center; gap: 6px; }
+  .chat-header-actions { display: flex; gap: 4px; }
+  .chat-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .chat-msg { max-width: 95%; }
+  .chat-msg-user { align-self: flex-end; }
+  .chat-msg-assistant { align-self: flex-start; }
+  .chat-bubble {
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .chat-msg-user .chat-bubble {
+    background: var(--accent);
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+  .chat-msg-assistant .chat-bubble {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-tool-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(139, 92, 246, 0.15);
+    border: 1px solid rgba(139, 92, 246, 0.4);
+    border-radius: 12px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: #c4b5fd;
+    margin: 2px 0;
+  }
+  .chat-tool-pill.error { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #fca5a5; }
+
+  .chat-confirm-card {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin: 4px 0;
+    font-size: 12px;
+  }
+  .chat-confirm-card .ccc-title { font-weight: 600; color: var(--warn); margin-bottom: 4px; }
+  .chat-confirm-card .ccc-detail { color: var(--muted); margin-bottom: 8px; word-break: break-all; }
+  .chat-confirm-card .ccc-actions { display: flex; gap: 6px; }
+
+  .chat-typing {
+    align-self: flex-start;
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    border-bottom-left-radius: 4px;
+  }
+  .chat-typing span {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: typing 1.2s infinite;
+  }
+  .chat-typing span:nth-child(2) { animation-delay: 0.2s; }
+  .chat-typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing {
+    0%, 60%, 100% { opacity: 0.3; }
+    30% { opacity: 1; }
+  }
+
+  .chat-empty {
+    color: var(--muted);
+    text-align: center;
+    padding: 24px 12px;
+    font-size: 13px;
+  }
+  .chat-suggestion {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-top: 6px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .chat-suggestion:hover { background: var(--border); }
+
+  .chat-input-bar {
+    padding: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .chat-input-bar textarea {
+    resize: none;
+    min-height: 40px;
+    max-height: 120px;
+    flex: 1;
+  }
+  .chat-error {
+    background: rgba(239,68,68,0.15);
+    border: 1px solid rgba(239,68,68,0.4);
+    color: #fca5a5;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
 
   /* Mobile */
   @media (max-width: 720px) {
@@ -393,6 +516,8 @@
     .proc-field { grid-template-columns: 1fr; }
     .proc-field-input { justify-content: flex-start; }
     .sig-wrap, .photo-wrap { align-items: flex-start; }
+    .chat-panel { width: 100%; right: -100%; }
+    .chat-fab { right: 16px; bottom: 16px; }
   }
   .mobile-menu-btn {
     display: none;
@@ -402,35 +527,11 @@
     font-size: 22px;
     margin-right: 10px;
   }
-/* AI Generator panel */
-  .ai-panel {
-    background: linear-gradient(135deg, rgba(139,92,246,0.12), rgba(59,130,246,0.12));
-    border: 1px solid #6366f1;
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 16px;
-  }
-  .ai-panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-    font-weight: 600;
-    font-size: 13px;
-  }
-  .ai-panel textarea { min-height: 70px; resize: vertical; }
-  .ai-panel-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
-  .ai-status { font-size: 12px; color: var(--muted); margin-top: 6px; min-height: 16px; }
-  .btn-ai {
-    background: linear-gradient(135deg, #8b5cf6, #3b82f6);
-    color: white;
-    border: none;
-  }
-  .btn-ai:hover { filter: brightness(1.1); }
-  .btn-ai:disabled { opacity: 0.6; cursor: not-allowed; }
 </style>
 </head>
 <body>
+<!-- ===== PART 1 END ===== -->
+<!-- ===== PART 2A START ===== -->
 
 <!-- ============ LOGIN SCREEN ============ -->
 <div id="login-screen">
@@ -493,6 +594,9 @@
       </section>
     </main>
   </div>
+
+  <!-- Floating chat button -->
+  <button class="chat-fab" id="chat-fab" title="AI Assistant">✨</button>
 </div>
 
 <!-- ============ MODAL: NEW / EDIT WORK ORDER ============ -->
@@ -541,8 +645,6 @@
     </div>
   </div>
 </div>
-<!-- ===== PART 1 END ===== -->
-<!-- ===== PART 2A START ===== -->
 
 <!-- ============ MODAL: WORK ORDER DETAIL ============ -->
 <div class="modal-backdrop" id="wo-detail-modal">
@@ -574,7 +676,7 @@
             <span>✨ Generate with AI</span>
             <button class="btn-icon" id="ai-cancel" title="Hide">✕</button>
           </div>
-          <textarea id="ai-prompt" placeholder="Describe the procedure you need. e.g. 'Daily forklift safety inspection' or 'Monthly HVAC filter and coil check'"></textarea>
+          <textarea id="ai-prompt" placeholder="Describe the procedure you need. e.g. 'Daily forklift safety inspection'"></textarea>
           <div class="ai-panel-actions">
             <button class="btn btn-ai" id="ai-generate">Generate</button>
           </div>
@@ -623,35 +725,51 @@
 <!-- ============ LIGHTBOX ============ -->
 <div class="lightbox" id="lightbox"><img id="lightbox-img" alt="" /></div>
 
+<!-- ============ AI ASSISTANT CHAT PANEL ============ -->
+<aside class="chat-panel" id="chat-panel" aria-hidden="true">
+  <div class="chat-header">
+    <h3>✨ AI Assistant</h3>
+    <div class="chat-header-actions">
+      <button class="btn-icon" id="chat-clear" title="Clear conversation">🗑</button>
+      <button class="btn-icon" id="chat-close" title="Close">✕</button>
+    </div>
+  </div>
+  <div class="chat-scroll" id="chat-scroll"></div>
+  <div class="chat-input-bar">
+    <textarea id="chat-input" rows="1" placeholder="Ask me anything… e.g. 'Create a work order for forklift hydraulics'"></textarea>
+    <button class="btn btn-ai" id="chat-send" title="Send">➤</button>
+  </div>
+</aside>
+<!-- ===== PART 2A END ===== -->
+<!-- ===== PART A START ===== -->
 <script>
-(function () {
-  "use strict";
+(() => {
+  // ===== Auth (client-side only, demo) =====
+  const USERS = { bill: 'bill', serina: 'serina' };
+  const SESSION_KEY = 'wopro_user';
+  const getCurrentUser = () => sessionStorage.getItem(SESSION_KEY);
+  const setCurrentUser = (u) => sessionStorage.setItem(SESSION_KEY, u);
+  const clearCurrentUser = () => sessionStorage.removeItem(SESSION_KEY);
 
-  // ---------- Auth ----------
-  const USERS = { bill: "bill", serina: "serina" };
-  const LS_USER = "wop_user";
-  const getCurrentUser = () => localStorage.getItem(LS_USER);
-  const setCurrentUser = (u) => localStorage.setItem(LS_USER, u);
-  const clearCurrentUser = () => localStorage.removeItem(LS_USER);
-
-  // ---------- API ----------
-  const API = window.location.origin + "/api";
-  async function apiFetch(path, opts) {
-    opts = opts || {};
-    opts.headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
-    if (opts.body && typeof opts.body !== "string") opts.body = JSON.stringify(opts.body);
-    const r = await fetch(API + path, opts);
-    if (!r.ok) {
-      const t = await r.text();
-      throw new Error("API " + r.status + ": " + t);
+  // ===== API client =====
+  async function apiFetch(path, opts = {}) {
+    const res = await fetch(path, {
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      ...opts,
+    });
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
+    if (!res.ok) {
+      const msg = (data && (data.error || data.message)) || `HTTP ${res.status}`;
+      throw new Error(msg);
     }
-    const ct = r.headers.get("content-type") || "";
-    return ct.includes("application/json") ? r.json() : r.text();
+    return data;
   }
 
-  // ---------- State ----------
+  // ===== State =====
   const state = {
-    view: "workorders",
+    view: 'workorders',
     workorders: [],
     procedures: [],
     activeWO: null,
@@ -659,161 +777,214 @@
     pbFields: [],
   };
 
-  // ---------- DOM helpers ----------
-  const $ = (s) => document.querySelector(s);
-  const $$ = (s) => Array.from(document.querySelectorAll(s));
-  function el(tag, attrs, children) {
-    const e = document.createElement(tag);
-    if (attrs) for (const k in attrs) {
-      if (k === "class") e.className = attrs[k];
-      else if (k === "html") e.innerHTML = attrs[k];
-      else if (k.startsWith("on") && typeof attrs[k] === "function") e.addEventListener(k.slice(2), attrs[k]);
-      else e.setAttribute(k, attrs[k]);
+  // ===== Helpers =====
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  function el(tag, attrs = {}, ...children) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (k === 'class') node.className = v;
+      else if (k === 'dataset') Object.assign(node.dataset, v);
+      else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
+      else if (v === true) node.setAttribute(k, '');
+      else if (v === false || v == null) {}
+      else node.setAttribute(k, v);
     }
-    if (children) (Array.isArray(children) ? children : [children]).forEach(c => {
-      if (c == null) return;
-      e.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
-    });
-    return e;
+    for (const c of children.flat()) {
+      if (c == null || c === false) continue;
+      node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    }
+    return node;
   }
-  const escapeHtml = (s) => String(s == null ? "" : s)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-  function fmtDate(iso) {
-    if (!iso) return "";
-    try { return new Date(iso).toLocaleString(); } catch (e) { return iso; }
-  }
+  const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const fmtDate = (iso) => { if (!iso) return ''; try { return new Date(iso).toLocaleString(); } catch { return iso; } };
 
-  // ---------- Modals ----------
-  const openModal = (id) => document.getElementById(id).classList.add("show");
-  const closeModal = (id) => document.getElementById(id).classList.remove("show");
-  document.addEventListener("click", (e) => {
-    const c = e.target.getAttribute && e.target.getAttribute("data-close");
-    if (c) closeModal(c);
+  // ===== Modals & lightbox =====
+  function openModal(id) { const m = document.getElementById(id); if (m) m.classList.add('open'); }
+  function closeModal(id) { const m = document.getElementById(id); if (m) m.classList.remove('open'); }
+  document.addEventListener('click', (e) => {
+    if (e.target.classList && e.target.classList.contains('modal')) e.target.classList.remove('open');
+    if (e.target.dataset && e.target.dataset.close) closeModal(e.target.dataset.close);
   });
-
-  // Lightbox
-  function showLightbox(src) {
-    $("#lightbox-img").src = src;
-    $("#lightbox").classList.add("show");
+  function openLightbox(src) {
+    const lb = $('#lightbox');
+    $('#lightbox-img').src = src;
+    lb.classList.add('open');
   }
-  $("#lightbox").addEventListener("click", () => $("#lightbox").classList.remove("show"));
+  $('#lightbox').addEventListener('click', () => $('#lightbox').classList.remove('open'));
 
-  // ---------- Login ----------
-  function showLogin() { $("#login-screen").style.display = "flex"; $("#app").style.display = "none"; }
-  function showApp() {
-    $("#login-screen").style.display = "none";
-    $("#app").style.display = "block";
-    $("#current-user").textContent = getCurrentUser() || "—";
-    refreshAll();
-  }
-  $("#login-btn").addEventListener("click", () => {
-    const u = $("#login-user").value.trim().toLowerCase();
-    const p = $("#login-pass").value;
+  // ===== Login =====
+  $('#login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const u = $('#login-username').value.trim().toLowerCase();
+    const p = $('#login-password').value;
     if (USERS[u] && USERS[u] === p) {
       setCurrentUser(u);
-      $("#login-error").textContent = "";
+      $('#login-error').textContent = '';
       showApp();
     } else {
-      $("#login-error").textContent = "Invalid username or password";
+      $('#login-error').textContent = 'Invalid username or password';
     }
   });
-  $("#login-pass").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#login-btn").click(); });
-  $("#logout-btn").addEventListener("click", () => { clearCurrentUser(); showLogin(); });
-
-  // ---------- View switching ----------
-  $$(".nav-item").forEach(item => {
-    item.addEventListener("click", () => {
-      switchView(item.getAttribute("data-view"));
-      $("#sidebar").classList.remove("open");
-    });
+  $('#logout-btn').addEventListener('click', () => {
+    clearCurrentUser();
+    showLogin();
   });
-  function switchView(v) {
-    state.view = v;
-    $$(".nav-item").forEach(n => n.classList.toggle("active", n.getAttribute("data-view") === v));
-    $("#view-workorders").style.display = v === "workorders" ? "" : "none";
-    $("#view-procedures").style.display = v === "procedures" ? "" : "none";
+
+  function showLogin() {
+    $('#login-screen').style.display = 'flex';
+    $('#app').style.display = 'none';
+    $('#login-username').value = '';
+    $('#login-password').value = '';
   }
-  ["menu-btn", "menu-btn-2"].forEach(id => {
-    const b = document.getElementById(id);
-    if (b) b.addEventListener("click", () => $("#sidebar").classList.toggle("open"));
-  });
+  function showApp() {
+    $('#login-screen').style.display = 'none';
+    $('#app').style.display = 'flex';
+    $('#current-user').textContent = getCurrentUser();
+    setView(state.view);
+    refreshAll();
+  }
 
-  // ---------- Refresh ----------
+  // ===== View switching =====
+  $$('.nav-btn').forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.view)));
+  function setView(v) {
+    state.view = v;
+    $$('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+    $('#view-workorders').style.display = v === 'workorders' ? 'block' : 'none';
+    $('#view-procedures').style.display = v === 'procedures' ? 'block' : 'none';
+    if (v === 'workorders') renderWorkOrders();
+    else renderProcedures();
+  }
+
+  // Mobile menu
+  $('#menu-toggle').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+
   async function refreshAll() {
     try {
-      const [wos, procs] = await Promise.all([apiFetch("/workorders"), apiFetch("/procedures")]);
-      state.workorders = wos;
-      state.procedures = procs;
-      renderWorkOrders();
-      renderProcedures();
-    } catch (e) { console.error(e); alert("Failed to load data: " + e.message); }
+      const [wos, procs] = await Promise.all([
+        apiFetch('/api/workorders'),
+        apiFetch('/api/procedures'),
+      ]);
+      state.workorders = wos || [];
+      state.procedures = procs || [];
+      if (state.view === 'workorders') renderWorkOrders();
+      else renderProcedures();
+      if (state.activeWO) {
+        const fresh = state.workorders.find(w => w.id === state.activeWO.id);
+        if (fresh) { state.activeWO = fresh; renderWorkOrderDetail(); }
+      }
+    } catch (e) {
+      console.error('refreshAll', e);
+    }
   }
-
-  // ---------- Render WOs ----------
+  // Expose for chat panel auto-refresh
+  window.__wopro_refresh = refreshAll;
+<!-- ===== PART A END ===== -->
+<!-- ===== PART B START ===== -->
+  // ===== Work Orders list =====
   function renderWorkOrders() {
-    const list = $("#wo-list");
-    list.innerHTML = "";
+    const list = $('#wo-list');
+    list.innerHTML = '';
     if (!state.workorders.length) {
-      list.appendChild(el("div", { class: "empty" }, "No work orders yet. Click + New Work Order to create one."));
+      list.appendChild(el('div', { class: 'empty' }, 'No work orders yet. Click "New Work Order" to create one.'));
       return;
     }
     state.workorders.forEach(w => {
-      const card = el("div", { class: "card" }, [
-        el("div", { class: "card-title" }, [
-          el("span", null, w.title),
-          el("span", { class: "badge badge-" + w.status }, w.status.replace("_", " ")),
-        ]),
-        el("div", { class: "card-meta" }, [
-          el("span", { class: "badge badge-" + w.priority }, w.priority),
-          el("span", null, "  " + (w.assignee || "Unassigned")),
-        ]),
-        el("div", { class: "card-meta", style: "margin-top:6px;" },
-          (w.procedures ? w.procedures.length : 0) + " procedure" + ((w.procedures && w.procedures.length === 1) ? "" : "s")),
-      ]);
-      card.addEventListener("click", () => openWorkOrder(w.id));
+      const card = el('div', { class: 'card wo-card', onclick: () => openWorkOrder(w.id) },
+        el('div', { class: 'wo-card-header' },
+          el('div', { class: 'wo-title' }, w.title || '(untitled)'),
+          el('span', { class: `pill priority-${w.priority || 'normal'}` }, w.priority || 'normal'),
+        ),
+        el('div', { class: 'wo-meta' },
+          el('span', {}, `Status: ${w.status || 'open'}`),
+          el('span', {}, `Assignee: ${w.assignee || '—'}`),
+          el('span', {}, `Created: ${fmtDate(w.createdAt)}`),
+        ),
+        w.description ? el('div', { class: 'wo-desc' }, w.description) : null,
+      );
       list.appendChild(card);
     });
   }
 
-  // ---------- Render Procs ----------
+  $('#new-wo-btn').addEventListener('click', () => {
+    $('#wo-form-title').textContent = 'New Work Order';
+    $('#wo-form').reset();
+    $('#wo-form-id').value = '';
+    openModal('modal-wo-form');
+  });
+
+  $('#wo-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = $('#wo-form-id').value;
+    const payload = {
+      title: $('#wo-title').value.trim(),
+      description: $('#wo-description').value.trim(),
+      priority: $('#wo-priority').value,
+      status: $('#wo-status').value,
+      assignee: $('#wo-assignee').value.trim(),
+    };
+    try {
+      if (id) {
+        await apiFetch(`/api/workorders/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      } else {
+        await apiFetch('/api/workorders', { method: 'POST', body: JSON.stringify(payload) });
+      }
+      closeModal('modal-wo-form');
+      await refreshAll();
+    } catch (err) {
+      alert('Save failed: ' + err.message);
+    }
+  });
+
+  // ===== Procedures list =====
   function renderProcedures() {
-    const list = $("#proc-list");
-    list.innerHTML = "";
+    const list = $('#proc-list');
+    list.innerHTML = '';
     if (!state.procedures.length) {
-      list.appendChild(el("div", { class: "empty" }, "No procedures yet. Click + New Procedure to build one."));
+      list.appendChild(el('div', { class: 'empty' }, 'No procedures yet. Click "New Procedure" to build one.'));
       return;
     }
     state.procedures.forEach(p => {
-      const card = el("div", { class: "card" }, [
-        el("div", { class: "card-title" }, p.name),
-        el("div", { class: "card-meta" }, (p.fields ? p.fields.length : 0) + " field" + ((p.fields && p.fields.length === 1) ? "" : "s")),
-        p.description ? el("div", { class: "card-meta", style: "margin-top:6px;" }, p.description) : null,
-      ]);
-      card.addEventListener("click", () => openProcedureBuilder(p));
+      const card = el('div', { class: 'card proc-card' },
+        el('div', { class: 'proc-card-header' },
+          el('div', { class: 'proc-title' }, p.name || '(untitled)'),
+          el('span', { class: 'pill' }, `${(p.fields || []).length} fields`),
+        ),
+        p.description ? el('div', { class: 'proc-desc' }, p.description) : null,
+        el('div', { class: 'card-actions' },
+          el('button', { class: 'btn btn-ghost', onclick: () => openProcedureBuilder(p) }, 'Edit'),
+          el('button', { class: 'btn btn-danger', onclick: async () => {
+            if (!confirm(`Delete procedure "${p.name}"? This cannot be undone.`)) return;
+            try { await apiFetch(`/api/procedures/${p.id}`, { method: 'DELETE' }); await refreshAll(); }
+            catch (err) { alert('Delete failed: ' + err.message); }
+          }}, 'Delete'),
+        ),
+      );
       list.appendChild(card);
     });
   }
+  $('#new-proc-btn').addEventListener('click', () => openProcedureBuilder(null));
 
-  // ---------- Image resize ----------
-  function resizeImage(file, maxDim, quality) {
+  // ===== Image resize =====
+  function resizeImage(file, maxDim = 1280, quality = 0.7) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onerror = reject;
+      reader.onerror = () => reject(new Error('Read failed'));
       reader.onload = () => {
         const img = new Image();
-        img.onerror = reject;
+        img.onerror = () => reject(new Error('Image load failed'));
         img.onload = () => {
           let { width, height } = img;
-          if (width > height && width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; }
-          else if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; }
-          const canvas = document.createElement("canvas");
-          canvas.width = width; canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          ctx.fillStyle = "#fff";
-          ctx.fillRect(0, 0, width, height);
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL("image/jpeg", quality));
+          if (width > maxDim || height > maxDim) {
+            const scale = Math.min(maxDim / width, maxDim / height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
         };
         img.src = reader.result;
       };
@@ -821,562 +992,600 @@
     });
   }
 
-  // ---------- Signature pad ----------
-  function makeSignaturePad(initialDataURL, onSave, onClear) {
-    const wrap = el("div", { class: "sig-wrap" });
-    const canvas = el("canvas", { class: "sig-canvas", width: "560", height: "220" });
-    canvas.style.width = "280px"; canvas.style.height = "110px";
-    const ctx = canvas.getContext("2d");
-    ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#000";
-    let drawing = false, dirty = false;
-
-    function getPos(e) {
-      const rect = canvas.getBoundingClientRect();
-      const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
-      const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-      const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-      return { x: cx * sx, y: cy * sy };
+  // ===== Signature pad =====
+  function makeSignaturePad(canvas) {
+    const ctx = canvas.getContext('2d');
+    let drawing = false, last = null;
+    function pos(ev) {
+      const r = canvas.getBoundingClientRect();
+      const t = ev.touches ? ev.touches[0] : ev;
+      return { x: (t.clientX - r.left) * (canvas.width / r.width), y: (t.clientY - r.top) * (canvas.height / r.height) };
     }
-    function start(e) { e.preventDefault(); drawing = true; dirty = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
-    function move(e) { if (!drawing) return; e.preventDefault(); const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }
-    function end() { if (!drawing) return; drawing = false; if (dirty) { dirty = false; onSave(canvas.toDataURL("image/png")); } }
-
-    canvas.addEventListener("mousedown", start);
-    canvas.addEventListener("mousemove", move);
-    canvas.addEventListener("mouseup", end);
-    canvas.addEventListener("mouseleave", end);
-    canvas.addEventListener("touchstart", start, { passive: false });
-    canvas.addEventListener("touchmove", move, { passive: false });
-    canvas.addEventListener("touchend", end);
-
-    if (initialDataURL) {
-      const img = new Image();
-      img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      img.src = initialDataURL;
+    function start(ev) { ev.preventDefault(); drawing = true; last = pos(ev); }
+    function move(ev) {
+      if (!drawing) return;
+      ev.preventDefault();
+      const p = pos(ev);
+      ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+      last = p;
     }
-
-    const clearBtn = el("button", { class: "btn btn-sm btn-secondary",
-      onclick: () => { ctx.clearRect(0, 0, canvas.width, canvas.height); onClear(); }
-    }, "Clear");
-
-    wrap.appendChild(canvas);
-    wrap.appendChild(el("div", { class: "sig-row" }, [clearBtn]));
-    return wrap;
-  }
-
-  function showSavedSignature(dataURL, onChange, onClear) {
-    const wrap = el("div", { class: "sig-wrap" });
-    const img = el("img", { class: "sig-saved", src: dataURL, alt: "signature" });
-    img.addEventListener("click", () => showLightbox(dataURL));
-    const changeBtn = el("button", { class: "btn btn-sm btn-secondary", onclick: onChange }, "Re-sign");
-    const clearBtn = el("button", { class: "btn btn-sm btn-secondary", onclick: onClear }, "Clear");
-    wrap.appendChild(img);
-    wrap.appendChild(el("div", { class: "sig-row" }, [changeBtn, clearBtn]));
-    return wrap;
-  }
-
-  // ---------- Photo field UI ----------
-  function makePhotoField(currentDataURL, onChange) {
-    const wrap = el("div", { class: "photo-wrap" });
-    const status = el("div", { class: "photo-status" });
-    const fileInput = el("input", { type: "file", accept: "image/*", capture: "environment", style: "display:none;" });
-    const uploadBtn = el("button", { class: "btn btn-sm btn-secondary", onclick: () => fileInput.click() }, currentDataURL ? "Replace Photo" : "Add Photo");
-    const removeBtn = el("button", { class: "btn btn-sm btn-secondary", onclick: () => onChange(null) }, "Remove");
-
-    fileInput.addEventListener("change", async () => {
-      const f = fileInput.files && fileInput.files[0];
-      if (!f) return;
-      status.textContent = "Processing…";
-      try {
-        const data = await resizeImage(f, 1280, 0.7);
-        status.textContent = "Saving…";
-        await onChange(data);
-        status.textContent = "";
-      } catch (e) {
-        status.textContent = "";
-        alert("Photo failed: " + e.message);
+    function end() {
+      if (!drawing) return;
+      drawing = false;
+      canvas.dispatchEvent(new CustomEvent('sig-change', { detail: canvas.toDataURL('image/png') }));
+    }
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    canvas.addEventListener('mouseup', end);
+    canvas.addEventListener('mouseleave', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', end);
+    return {
+      clear() { ctx.clearRect(0,0,canvas.width,canvas.height); canvas.dispatchEvent(new CustomEvent('sig-change', { detail: '' })); },
+      load(dataUrl) {
+        if (!dataUrl) return;
+        const img = new Image();
+        img.onload = () => { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width,canvas.height); };
+        img.src = dataUrl;
       }
-      fileInput.value = "";
-    });
-
-    if (currentDataURL) {
-      const img = el("img", { class: "photo-thumb", src: currentDataURL, alt: "photo" });
-      img.addEventListener("click", () => showLightbox(currentDataURL));
-      wrap.appendChild(img);
-    }
-    const row = el("div", { class: "photo-row" }, [uploadBtn]);
-    if (currentDataURL) row.appendChild(removeBtn);
-    wrap.appendChild(row);
-    wrap.appendChild(status);
-    wrap.appendChild(fileInput);
-    return wrap;
-  }
-<!-- ===== PART 2A END ===== -->
-  <!-- ===== PART 2B START ===== -->
-
-  // ---------- New / Edit WO ----------
-  $("#new-wo-btn").addEventListener("click", () => {
-    state.activeWO = null;
-    $("#wo-form-title").textContent = "New Work Order";
-    $("#wof-title").value = "";
-    $("#wof-desc").value = "";
-    $("#wof-status").value = "open";
-    $("#wof-priority").value = "medium";
-    $("#wof-assignee").value = "";
-    openModal("wo-form-modal");
-  });
-  $("#wof-save").addEventListener("click", async () => {
-    const payload = {
-      title: $("#wof-title").value.trim(),
-      description: $("#wof-desc").value,
-      status: $("#wof-status").value,
-      priority: $("#wof-priority").value,
-      assignee: $("#wof-assignee").value.trim(),
     };
-    if (!payload.title) { alert("Title required"); return; }
-    try {
-      if (state.activeWO) await apiFetch("/workorders/" + state.activeWO.id, { method: "PUT", body: payload });
-      else await apiFetch("/workorders", { method: "POST", body: payload });
-      closeModal("wo-form-modal");
-      await refreshAll();
-      if (state.activeWO) openWorkOrder(state.activeWO.id);
-    } catch (e) { alert("Save failed: " + e.message); }
-  });
+  }
 
-  // ---------- Open WO detail ----------
+  // ===== WO detail =====
   async function openWorkOrder(id) {
     try {
-      const w = await apiFetch("/workorders/" + id);
-      state.activeWO = w;
-      $("#wod-title").textContent = w.title;
-      renderWorkOrderDetail(w);
-      openModal("wo-detail-modal");
-    } catch (e) { alert("Failed to load work order: " + e.message); }
+      const wo = await apiFetch(`/api/workorders/${id}`);
+      state.activeWO = wo;
+      renderWorkOrderDetail();
+      openModal('modal-wo-detail');
+    } catch (e) { alert('Open failed: ' + e.message); }
   }
 
-  function renderWorkOrderDetail(w) {
-    const body = $("#wod-body");
-    body.innerHTML = "";
-    body.appendChild(el("div", { class: "field-row" }, [
-      el("label", null, "Status"),
-      el("div", null, [
-        el("span", { class: "badge badge-" + w.status }, w.status.replace("_", " ")),
-        document.createTextNode("  "),
-        el("span", { class: "badge badge-" + w.priority }, w.priority),
-        document.createTextNode("  "),
-        el("span", { class: "card-meta" }, "Assignee: " + (w.assignee || "—")),
-      ]),
-    ]));
-    if (w.description) {
-      body.appendChild(el("div", { class: "field-row" }, [
-        el("label", null, "Description"),
-        el("div", null, w.description),
-      ]));
-    }
-    const procHeader = el("div", { class: "view-header", style: "margin: 16px 0 10px;" }, [
-      el("h3", { style: "margin:0; font-size:16px;" }, "Procedures (" + (w.procedures || []).length + ")"),
-      el("button", { class: "btn btn-sm", onclick: () => openAttachPicker() }, "+ Attach Procedure"),
-    ]);
-    body.appendChild(procHeader);
-    if (!w.procedures || !w.procedures.length) {
-      body.appendChild(el("div", { class: "card-meta" }, "No procedures attached."));
+  function renderWorkOrderDetail() {
+    const wo = state.activeWO;
+    if (!wo) return;
+    $('#wo-detail-title').textContent = wo.title || '(untitled)';
+    const body = $('#wo-detail-body');
+    body.innerHTML = '';
+    body.appendChild(el('div', { class: 'wo-meta' },
+      el('span', { class: `pill priority-${wo.priority || 'normal'}` }, wo.priority || 'normal'),
+      el('span', {}, `Status: ${wo.status || 'open'}`),
+      el('span', {}, `Assignee: ${wo.assignee || '—'}`),
+      el('span', {}, `Created: ${fmtDate(wo.createdAt)}`),
+    ));
+    if (wo.description) body.appendChild(el('p', { class: 'wo-desc' }, wo.description));
+
+    body.appendChild(el('div', { class: 'detail-actions' },
+      el('button', { class: 'btn btn-ghost', onclick: () => {
+        $('#wo-form-title').textContent = 'Edit Work Order';
+        $('#wo-form-id').value = wo.id;
+        $('#wo-title').value = wo.title || '';
+        $('#wo-description').value = wo.description || '';
+        $('#wo-priority').value = wo.priority || 'normal';
+        $('#wo-status').value = wo.status || 'open';
+        $('#wo-assignee').value = wo.assignee || '';
+        closeModal('modal-wo-detail');
+        openModal('modal-wo-form');
+      }}, 'Edit'),
+      el('button', { class: 'btn btn-danger', onclick: async () => {
+        if (!confirm(`Delete work order "${wo.title}"?`)) return;
+        try {
+          await apiFetch(`/api/workorders/${wo.id}`, { method: 'DELETE' });
+          state.activeWO = null;
+          closeModal('modal-wo-detail');
+          await refreshAll();
+        } catch (err) { alert('Delete failed: ' + err.message); }
+      }}, 'Delete'),
+      el('button', { class: 'btn btn-primary', onclick: () => openAttachModal(wo.id) }, '+ Attach Procedure'),
+    ));
+
+    const procWrap = el('div', { class: 'attached-procs' });
+    body.appendChild(procWrap);
+    const attached = wo.procedures || [];
+    if (!attached.length) {
+      procWrap.appendChild(el('div', { class: 'empty' }, 'No procedures attached.'));
     } else {
-      w.procedures.forEach(inst => body.appendChild(renderProcedureInstance(w, inst)));
+      attached.forEach(inst => procWrap.appendChild(renderProcedureInstance(wo, inst)));
     }
-    const act = (w.activity || []).slice().reverse();
-    const actWrap = el("div", { class: "activity-log" }, [
-      el("h3", { style: "margin:0 0 8px; font-size:14px;" }, "Activity"),
-    ]);
-    if (!act.length) actWrap.appendChild(el("div", { class: "card-meta" }, "No activity yet."));
-    act.forEach(a => {
-      actWrap.appendChild(el("div", { class: "activity-item" }, [
-        el("span", { class: "activity-time" }, fmtDate(a.at)),
-        el("span", null, a.message),
-      ]));
-    });
-    body.appendChild(actWrap);
   }
-
-  // ---------- Save helpers ----------
-  const saveTimers = {};
-  function queueResponseSave(woId, instId, partial) {
-    if (saveTimers[instId]) clearTimeout(saveTimers[instId]);
-    saveTimers[instId] = setTimeout(async () => {
-      try {
-        await apiFetch("/workorders/" + woId + "/procedures/" + instId, { method: "PATCH", body: { responses: partial } });
-      } catch (e) { console.error("Save responses failed", e); }
-    }, 500);
-  }
-  async function saveResponseNow(woId, instId, partial) {
-    try {
-      await apiFetch("/workorders/" + woId + "/procedures/" + instId, { method: "PATCH", body: { responses: partial } });
-    } catch (e) { alert("Save failed: " + e.message); }
-  }
-
-  // ---------- Render procedure instance ----------
-  function renderProcedureInstance(w, inst) {
-    const wrap = el("div", { class: "proc-instance" });
-    const head = el("div", { class: "proc-instance-head" }, [
-      el("strong", null, inst.name),
-      el("div", null, [
-        el("span", { class: "badge badge-" + inst.status }, inst.status.replace("_", " ")),
-        document.createTextNode(" "),
-        el("button", {
-          class: "btn btn-sm " + (inst.status === "complete" ? "btn-secondary" : "btn-success"),
-          onclick: async () => {
-            const next = inst.status === "complete" ? "in_progress" : "complete";
-            try {
-              await apiFetch("/workorders/" + w.id + "/procedures/" + inst.instanceId, { method: "PATCH", body: { status: next } });
-              await openWorkOrder(w.id);
-            } catch (e) { alert("Failed: " + e.message); }
-          },
-        }, inst.status === "complete" ? "Reopen" : "Mark Complete"),
-        document.createTextNode(" "),
-        el("button", {
-          class: "btn btn-sm btn-danger",
-          onclick: async () => {
-            if (!confirm("Detach this procedure from the work order?")) return;
-            try {
-              await apiFetch("/workorders/" + w.id + "/procedures/" + inst.instanceId, { method: "DELETE" });
-              await openWorkOrder(w.id);
-            } catch (e) { alert("Failed: " + e.message); }
-          },
-        }, "Detach"),
-      ]),
-    ]);
-    wrap.appendChild(head);
-
-    if (inst.description) {
-      wrap.appendChild(el("div", { class: "card-meta", style: "margin-bottom:8px;" }, inst.description));
-    }
-
-    (inst.fields || []).forEach(f => {
-      const row = el("div", { class: "proc-field" });
-      row.appendChild(el("div", { class: "proc-field-label", html:
-        escapeHtml(f.label) + (f.required ? '<span class="req">*</span>' : '') +
-        ' <span class="card-meta">(' + f.type + ')</span>'
-      }));
-      const inputWrap = el("div", { class: "proc-field-input" });
-      const val = inst.responses ? inst.responses[f.id] : undefined;
-
-      if (f.type === "checkbox") {
-        const cb = el("input", { type: "checkbox" });
-        if (val === true) cb.checked = true;
-        cb.addEventListener("change", () => {
-          inst.responses = inst.responses || {};
-          inst.responses[f.id] = cb.checked;
-          queueResponseSave(w.id, inst.instanceId, { [f.id]: cb.checked });
+<!-- ===== PART B END ===== -->
+<!-- ===== PART C START ===== -->
+  function renderProcedureInstance(wo, inst) {
+    const proc = state.procedures.find(p => p.id === inst.procedureId);
+    const wrap = el('div', { class: 'proc-instance card' });
+    wrap.appendChild(el('div', { class: 'proc-instance-header' },
+      el('div', { class: 'proc-title' }, proc ? proc.name : '(deleted procedure)'),
+      el('div', { class: 'proc-instance-actions' },
+        el('button', { class: 'btn btn-ghost btn-sm', onclick: async () => {
+          try { await apiFetch(`/api/workorders/${wo.id}/procedures/${inst.id}/complete`, { method: 'POST' }); await refreshAll(); }
+          catch (e) { alert('Mark complete failed: ' + e.message); }
+        }}, inst.completedAt ? `✓ Completed ${fmtDate(inst.completedAt)}` : 'Mark Complete'),
+        el('button', { class: 'btn btn-danger btn-sm', onclick: async () => {
+          if (!confirm('Detach this procedure?')) return;
+          try { await apiFetch(`/api/workorders/${wo.id}/procedures/${inst.id}`, { method: 'DELETE' }); await refreshAll(); }
+          catch (e) { alert('Detach failed: ' + e.message); }
+        }}, 'Detach'),
+      ),
+    ));
+    if (!proc) return wrap;
+    const fieldsWrap = el('div', { class: 'proc-fields' });
+    wrap.appendChild(fieldsWrap);
+    (proc.fields || []).forEach(f => {
+      const current = (inst.responses || {})[f.id];
+      const row = el('div', { class: 'field-row' });
+      row.appendChild(el('label', { class: 'field-label' }, f.label || '(unlabeled)', f.required ? el('span', { class: 'req' }, ' *') : null));
+      const save = (val) => queueResponseSave(wo.id, inst.id, f.id, val);
+      if (f.type === 'checkbox') {
+        const cb = el('input', { type: 'checkbox' });
+        cb.checked = !!current;
+        cb.addEventListener('change', () => save(cb.checked));
+        row.appendChild(cb);
+      } else if (f.type === 'text') {
+        const inp = el('input', { type: 'text', class: 'input' });
+        inp.value = current || '';
+        inp.addEventListener('input', () => save(inp.value));
+        row.appendChild(inp);
+      } else if (f.type === 'number') {
+        const inp = el('input', { type: 'number', class: 'input' });
+        if (current != null) inp.value = current;
+        inp.addEventListener('input', () => save(inp.value === '' ? null : Number(inp.value)));
+        row.appendChild(inp);
+      } else if (f.type === 'passfail') {
+        const group = el('div', { class: 'pf-group' });
+        ['pass', 'fail', 'n/a'].forEach(opt => {
+          const id = `pf-${inst.id}-${f.id}-${opt}`;
+          const r = el('input', { type: 'radio', name: `pf-${inst.id}-${f.id}`, id, value: opt });
+          if (current === opt) r.checked = true;
+          r.addEventListener('change', () => save(opt));
+          group.appendChild(r);
+          group.appendChild(el('label', { for: id, class: `pf-${opt.replace('/','')}` }, opt.toUpperCase()));
         });
-        inputWrap.appendChild(cb);
-      } else if (f.type === "text") {
-        const input = el("input", { type: "text" });
-        if (val != null) input.value = val;
-        input.addEventListener("input", () => {
-          inst.responses = inst.responses || {};
-          inst.responses[f.id] = input.value;
-          queueResponseSave(w.id, inst.instanceId, { [f.id]: input.value });
-        });
-        inputWrap.appendChild(input);
-      } else if (f.type === "number") {
-        const input = el("input", { type: "number" });
-        if (val != null) input.value = val;
-        input.addEventListener("input", () => {
-          inst.responses = inst.responses || {};
-          const n = input.value === "" ? null : Number(input.value);
-          inst.responses[f.id] = n;
-          queueResponseSave(w.id, inst.instanceId, { [f.id]: n });
-        });
-        inputWrap.appendChild(input);
-      } else if (f.type === "passfail") {
-        const pass = el("button", { class: "pf-btn pass" + (val === "pass" ? " active" : "") }, "Pass");
-        const fail = el("button", { class: "pf-btn fail" + (val === "fail" ? " active" : "") }, "Fail");
-        function set(v) {
-          inst.responses = inst.responses || {};
-          inst.responses[f.id] = v;
-          pass.classList.toggle("active", v === "pass");
-          fail.classList.toggle("active", v === "fail");
-          queueResponseSave(w.id, inst.instanceId, { [f.id]: v });
+        row.appendChild(group);
+      } else if (f.type === 'date') {
+        const inp = el('input', { type: 'date', class: 'input' });
+        inp.value = current || '';
+        inp.addEventListener('input', () => save(inp.value || null));
+        row.appendChild(inp);
+      } else if (f.type === 'signature') {
+        const canvas = el('canvas', { class: 'sig-pad', width: 600, height: 180 });
+        const pad = makeSignaturePad(canvas);
+        if (current) pad.load(current);
+        canvas.addEventListener('sig-change', (e) => save(e.detail));
+        const clearBtn = el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => pad.clear() }, 'Clear');
+        row.appendChild(el('div', { class: 'sig-wrap' }, canvas, clearBtn));
+      } else if (f.type === 'photo') {
+        const wrapPhoto = el('div', { class: 'photo-wrap' });
+        const preview = el('div', { class: 'photo-preview' });
+        if (current) {
+          const img = el('img', { src: current, alt: 'photo' });
+          img.addEventListener('click', () => openLightbox(current));
+          preview.appendChild(img);
         }
-        pass.addEventListener("click", () => set("pass"));
-        fail.addEventListener("click", () => set("fail"));
-        inputWrap.appendChild(pass);
-        inputWrap.appendChild(fail);
-      } else if (f.type === "date") {
-        const input = el("input", { type: "date" });
-        if (val) input.value = val;
-        input.addEventListener("change", () => {
-          inst.responses = inst.responses || {};
-          const v = input.value || null;
-          inst.responses[f.id] = v;
-          queueResponseSave(w.id, inst.instanceId, { [f.id]: v });
+        const fileInp = el('input', { type: 'file', accept: 'image/*', capture: 'environment' });
+        const status = el('span', { class: 'photo-status' });
+        fileInp.addEventListener('change', async () => {
+          const file = fileInp.files[0]; if (!file) return;
+          status.textContent = 'Resizing…';
+          try {
+            const dataUrl = await resizeImage(file);
+            preview.innerHTML = '';
+            const img = el('img', { src: dataUrl, alt: 'photo' });
+            img.addEventListener('click', () => openLightbox(dataUrl));
+            preview.appendChild(img);
+            save(dataUrl);
+            status.textContent = 'Saved';
+            setTimeout(() => status.textContent = '', 1500);
+          } catch (e) { status.textContent = 'Error: ' + e.message; }
         });
-        inputWrap.appendChild(input);
-      } else if (f.type === "signature") {
-        const mount = el("div");
-        function renderSig(currentVal) {
-          mount.innerHTML = "";
-          if (currentVal && typeof currentVal === "string" && currentVal.startsWith("data:")) {
-            mount.appendChild(showSavedSignature(currentVal,
-              () => { renderSig(null); },
-              async () => {
-                inst.responses = inst.responses || {};
-                inst.responses[f.id] = null;
-                await saveResponseNow(w.id, inst.instanceId, { [f.id]: null });
-                renderSig(null);
-              }
-            ));
-          } else {
-            mount.appendChild(makeSignaturePad(null,
-              async (dataURL) => {
-                inst.responses = inst.responses || {};
-                inst.responses[f.id] = dataURL;
-                await saveResponseNow(w.id, inst.instanceId, { [f.id]: dataURL });
-                renderSig(dataURL);
-              },
-              async () => {
-                inst.responses = inst.responses || {};
-                inst.responses[f.id] = null;
-                await saveResponseNow(w.id, inst.instanceId, { [f.id]: null });
-              }
-            ));
-          }
-        }
-        renderSig(val);
-        inputWrap.appendChild(mount);
-      } else if (f.type === "photo") {
-        const mount = el("div");
-        function renderPhoto(currentVal) {
-          mount.innerHTML = "";
-          mount.appendChild(makePhotoField(
-            currentVal && typeof currentVal === "string" && currentVal.startsWith("data:") ? currentVal : null,
-            async (dataURL) => {
-              inst.responses = inst.responses || {};
-              inst.responses[f.id] = dataURL;
-              await saveResponseNow(w.id, inst.instanceId, { [f.id]: dataURL });
-              renderPhoto(dataURL);
-            }
-          ));
-        }
-        renderPhoto(val);
-        inputWrap.appendChild(mount);
+        const clearBtn = el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
+          preview.innerHTML = ''; fileInp.value = ''; save(null);
+        }}, 'Clear');
+        wrapPhoto.appendChild(preview);
+        wrapPhoto.appendChild(el('div', { class: 'photo-actions' }, fileInp, clearBtn, status));
+        row.appendChild(wrapPhoto);
       }
-
-      row.appendChild(inputWrap);
-      wrap.appendChild(row);
+      fieldsWrap.appendChild(row);
     });
-
     return wrap;
   }
 
-  // ---------- Edit / Delete WO ----------
-  $("#wod-edit").addEventListener("click", () => {
-    const w = state.activeWO; if (!w) return;
-    $("#wo-form-title").textContent = "Edit Work Order";
-    $("#wof-title").value = w.title;
-    $("#wof-desc").value = w.description || "";
-    $("#wof-status").value = w.status;
-    $("#wof-priority").value = w.priority;
-    $("#wof-assignee").value = w.assignee || "";
-    closeModal("wo-detail-modal");
-    openModal("wo-form-modal");
-  });
-  $("#wod-delete").addEventListener("click", async () => {
-    const w = state.activeWO; if (!w) return;
-    if (!confirm("Delete this work order? This cannot be undone.")) return;
+  // Debounced response save
+  const _saveTimers = new Map();
+  function queueResponseSave(woId, instId, fieldId, value) {
+    const key = `${woId}:${instId}:${fieldId}`;
+    if (_saveTimers.has(key)) clearTimeout(_saveTimers.get(key));
+    _saveTimers.set(key, setTimeout(() => saveResponseNow(woId, instId, fieldId, value), 400));
+  }
+  async function saveResponseNow(woId, instId, fieldId, value) {
     try {
-      await apiFetch("/workorders/" + w.id, { method: "DELETE" });
-      closeModal("wo-detail-modal");
-      state.activeWO = null;
-      await refreshAll();
-    } catch (e) { alert("Delete failed: " + e.message); }
-  });
+      await apiFetch(`/api/workorders/${woId}/procedures/${instId}/responses`, {
+        method: 'PATCH', body: JSON.stringify({ [fieldId]: value }),
+      });
+      const wo = state.workorders.find(w => w.id === woId);
+      if (wo) {
+        const inst = (wo.procedures || []).find(p => p.id === instId);
+        if (inst) { inst.responses = inst.responses || {}; inst.responses[fieldId] = value; }
+      }
+      if (state.activeWO && state.activeWO.id === woId) {
+        const inst = (state.activeWO.procedures || []).find(p => p.id === instId);
+        if (inst) { inst.responses = inst.responses || {}; inst.responses[fieldId] = value; }
+      }
+    } catch (e) { console.error('saveResponse', e); }
+  }
 
-  // ---------- Attach picker ----------
-  function openAttachPicker() {
-    const body = $("#attach-body");
-    body.innerHTML = "";
+  // ===== Attach modal =====
+  function openAttachModal(woId) {
+    const list = $('#attach-list');
+    list.innerHTML = '';
     if (!state.procedures.length) {
-      body.appendChild(el("div", { class: "empty" }, "No procedures available. Create one in the Procedures view first."));
+      list.appendChild(el('div', { class: 'empty' }, 'No procedures available. Build one first.'));
     } else {
       state.procedures.forEach(p => {
-        const row = el("div", { class: "card", style: "margin-bottom:8px;" }, [
-          el("div", { class: "card-title" }, p.name),
-          el("div", { class: "card-meta" }, (p.fields || []).length + " fields"),
-        ]);
-        row.addEventListener("click", async () => {
-          try {
-            await apiFetch("/workorders/" + state.activeWO.id + "/procedures", { method: "POST", body: { procedureId: p.id } });
-            closeModal("attach-modal");
-            await openWorkOrder(state.activeWO.id);
-          } catch (e) { alert("Attach failed: " + e.message); }
-        });
-        body.appendChild(row);
+        list.appendChild(el('div', { class: 'attach-item' },
+          el('div', {},
+            el('div', { class: 'proc-title' }, p.name),
+            el('div', { class: 'proc-desc small' }, `${(p.fields || []).length} fields`),
+          ),
+          el('button', { class: 'btn btn-primary btn-sm', onclick: async () => {
+            try {
+              await apiFetch(`/api/workorders/${woId}/procedures`, {
+                method: 'POST', body: JSON.stringify({ procedureId: p.id }),
+              });
+              closeModal('modal-attach');
+              await refreshAll();
+            } catch (e) { alert('Attach failed: ' + e.message); }
+          }}, 'Attach'),
+        ));
       });
     }
-    openModal("attach-modal");
+    openModal('modal-attach');
   }
 
-  // ---------- Procedure Builder ----------
-  $("#new-proc-btn").addEventListener("click", () => openProcedureBuilder(null));
-  // ---------- AI Generate ----------
-  const aiPanel = $("#ai-panel-wrap");
-  const aiShow = $("#ai-show");
-  const aiCancel = $("#ai-cancel");
-  const aiGenerate = $("#ai-generate");
-  const aiPrompt = $("#ai-prompt");
-  const aiStatus = $("#ai-status");
-
-  aiShow.addEventListener("click", () => {
-    aiPanel.style.display = "";
-    aiShow.style.display = "none";
-    aiPrompt.focus();
-  });
-  aiCancel.addEventListener("click", () => {
-    aiPanel.style.display = "none";
-    aiShow.style.display = "";
-    aiStatus.textContent = "";
-  });
-
-  aiGenerate.addEventListener("click", async () => {
-    const prompt = aiPrompt.value.trim();
-    if (!prompt) { aiStatus.textContent = "Please describe the procedure first."; return; }
-    aiGenerate.disabled = true;
-    aiStatus.textContent = "Generating… (5–15 seconds)";
-    try {
-      const r = await apiFetch("/procedures/generate", { method: "POST", body: { prompt } });
-      $("#pb-name").value = r.name || "";
-      $("#pb-desc").value = r.description || "";
-      state.pbFields = (r.fields || []).map(f => ({
-        type: f.type,
-        label: f.label,
-        required: !!f.required,
-      }));
-      renderPBFields();
-      aiStatus.textContent = "Generated " + state.pbFields.length + " fields. Review and edit, then Save.";
-    } catch (e) {
-      aiStatus.textContent = "Failed: " + e.message;
-    } finally {
-      aiGenerate.disabled = false;
-    }
-  });
-
-  function openProcedureBuilder(p) {
-    state.editingProc = p;
-    $("#pb-title").textContent = p ? "Edit Procedure" : "New Procedure";
-    $("#pb-name").value = p ? p.name : "";
-    $("#pb-desc").value = p ? (p.description || "") : "";
-    state.pbFields = p ? p.fields.map(f => ({ ...f })) : [];
-    $("#pb-delete").style.display = p ? "" : "none";
-    // Reset AI panel
-    $("#ai-panel-wrap").style.display = "none";
-    $("#ai-show").style.display = p ? "none" : "";
-    $("#ai-prompt").value = "";
-    $("#ai-status").textContent = "";
-    renderPBFields();
-    openModal("proc-builder-modal");
-  }
-
+  // ===== Procedure builder =====
   const FIELD_TYPE_OPTIONS = [
-    ["checkbox", "Checkbox"],
-    ["text", "Text"],
-    ["number", "Number"],
-    ["passfail", "Pass/Fail"],
-    ["date", "Date"],
-    ["signature", "Signature"],
-    ["photo", "Photo"],
+    { value: 'checkbox', label: 'Checkbox' },
+    { value: 'text', label: 'Text' },
+    { value: 'number', label: 'Number' },
+    { value: 'passfail', label: 'Pass / Fail' },
+    { value: 'date', label: 'Date' },
+    { value: 'signature', label: 'Signature' },
+    { value: 'photo', label: 'Photo' },
   ];
 
+  function openProcedureBuilder(proc) {
+    state.editingProc = proc;
+    state.pbFields = proc ? JSON.parse(JSON.stringify(proc.fields || [])) : [];
+    $('#pb-title').textContent = proc ? 'Edit Procedure' : 'New Procedure';
+    $('#pb-name').value = proc ? (proc.name || '') : '';
+    $('#pb-description').value = proc ? (proc.description || '') : '';
+    $('#pb-delete').style.display = proc ? '' : 'none';
+    $('#ai-panel').style.display = 'none';
+    $('#ai-prompt').value = '';
+    $('#ai-status').textContent = '';
+    renderPBFields();
+    openModal('modal-pb');
+  }
+
   function renderPBFields() {
-    const wrap = $("#pb-fields");
-    wrap.innerHTML = "";
+    const wrap = $('#pb-fields'); wrap.innerHTML = '';
     if (!state.pbFields.length) {
-      wrap.appendChild(el("div", { class: "card-meta" }, "No fields yet. Add one below."));
+      wrap.appendChild(el('div', { class: 'empty' }, 'No fields. Click "+ Add Field" or use AI to generate.'));
       return;
     }
-    state.pbFields.forEach((f, i) => {
-      const row = el("div", { class: "pb-field-row" });
-      const typeSel = el("select");
-      FIELD_TYPE_OPTIONS.forEach(([v, label]) => {
-        const opt = new Option(label, v, false, f.type === v);
-        typeSel.appendChild(opt);
-      });
-      typeSel.value = f.type;
-      typeSel.addEventListener("change", () => { f.type = typeSel.value; });
-
-      const labelInput = el("input", { type: "text", placeholder: "Field label" });
-      labelInput.value = f.label || "";
-      labelInput.addEventListener("input", () => { f.label = labelInput.value; });
-
-      const reqWrap = el("label", { style: "display:flex; align-items:center; gap:4px; font-size:12px; color:var(--muted); white-space:nowrap;" });
-      const reqCb = el("input", { type: "checkbox" });
-      if (f.required) reqCb.checked = true;
-      reqCb.addEventListener("change", () => { f.required = reqCb.checked; });
-      reqWrap.appendChild(reqCb);
-      reqWrap.appendChild(document.createTextNode("Required"));
-
-      const reorder = el("div", { class: "pb-reorder" }, [
-        el("button", { class: "btn-secondary", onclick: () => moveField(i, -1) }, "▲"),
-        el("button", { class: "btn-secondary", onclick: () => moveField(i, 1) }, "▼"),
-      ]);
-      const del = el("button", { class: "btn btn-sm btn-danger", onclick: () => { state.pbFields.splice(i, 1); renderPBFields(); } }, "✕");
-
-      row.appendChild(typeSel);
-      row.appendChild(labelInput);
-      row.appendChild(reqWrap);
-      row.appendChild(el("div", { style: "display:flex; gap:6px; align-items:center;" }, [reorder, del]));
+    state.pbFields.forEach((f, idx) => {
+      const row = el('div', { class: 'pb-field' });
+      const labelInp = el('input', { class: 'input', type: 'text', placeholder: 'Field label' });
+      labelInp.value = f.label || '';
+      labelInp.addEventListener('input', () => { f.label = labelInp.value; });
+      const typeSel = el('select', { class: 'input' },
+        ...FIELD_TYPE_OPTIONS.map(o => {
+          const opt = el('option', { value: o.value }, o.label);
+          if (o.value === f.type) opt.selected = true;
+          return opt;
+        })
+      );
+      typeSel.addEventListener('change', () => { f.type = typeSel.value; });
+      const reqLbl = el('label', { class: 'pb-req' });
+      const reqCb = el('input', { type: 'checkbox' });
+      reqCb.checked = !!f.required;
+      reqCb.addEventListener('change', () => { f.required = reqCb.checked; });
+      reqLbl.appendChild(reqCb);
+      reqLbl.appendChild(document.createTextNode(' Required'));
+      const upBtn = el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => moveField(idx, -1) }, '↑');
+      const downBtn = el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => moveField(idx, 1) }, '↓');
+      const delBtn = el('button', { class: 'btn btn-danger btn-sm', type: 'button', onclick: () => {
+        state.pbFields.splice(idx, 1); renderPBFields();
+      }}, '✕');
+      row.appendChild(labelInp); row.appendChild(typeSel); row.appendChild(reqLbl);
+      row.appendChild(upBtn); row.appendChild(downBtn); row.appendChild(delBtn);
       wrap.appendChild(row);
     });
   }
 
-  function moveField(i, dir) {
-    const j = i + dir;
-    if (j < 0 || j >= state.pbFields.length) return;
-    const tmp = state.pbFields[i];
-    state.pbFields[i] = state.pbFields[j];
-    state.pbFields[j] = tmp;
+  function moveField(idx, delta) {
+    const ni = idx + delta;
+    if (ni < 0 || ni >= state.pbFields.length) return;
+    const tmp = state.pbFields[idx];
+    state.pbFields[idx] = state.pbFields[ni];
+    state.pbFields[ni] = tmp;
     renderPBFields();
   }
 
-  $("#pb-add-field").addEventListener("click", () => {
-    state.pbFields.push({ type: "checkbox", label: "", required: false });
+  $('#pb-add-field').addEventListener('click', () => {
+    state.pbFields.push({ id: 'f_' + Math.random().toString(36).slice(2, 9), label: '', type: 'checkbox', required: false });
     renderPBFields();
   });
 
-  $("#pb-save").addEventListener("click", async () => {
-    const name = $("#pb-name").value.trim();
-    if (!name) { alert("Name required"); return; }
-    const payload = {
-      name,
-      description: $("#pb-desc").value,
-      fields: state.pbFields.map(f => ({
-        id: f.id,
-        type: f.type,
-        label: (f.label || "").trim() || "Untitled field",
-        required: !!f.required,
-      })),
+  $('#pb-save').addEventListener('click', async () => {
+    const name = $('#pb-name').value.trim();
+    if (!name) { alert('Procedure name is required'); return; }
+    const description = $('#pb-description').value.trim();
+    const fields = state.pbFields.filter(f => (f.label || '').trim()).map(f => ({
+      id: f.id || ('f_' + Math.random().toString(36).slice(2, 9)),
+      label: f.label.trim(),
+      type: f.type || 'checkbox',
+      required: !!f.required,
+    }));
+    const payload = { name, description, fields };
+    try {
+      if (state.editingProc) {
+        await apiFetch(`/api/procedures/${state.editingProc.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      } else {
+        await apiFetch('/api/procedures', { method: 'POST', body: JSON.stringify(payload) });
+      }
+      closeModal('modal-pb');
+      await refreshAll();
+    } catch (e) { alert('Save failed: ' + e.message); }
+  });
+
+  $('#pb-delete').addEventListener('click', async () => {
+    if (!state.editingProc) return;
+    if (!confirm(`Delete procedure "${state.editingProc.name}"?`)) return;
+    try {
+      await apiFetch(`/api/procedures/${state.editingProc.id}`, { method: 'DELETE' });
+      closeModal('modal-pb'); await refreshAll();
+    } catch (e) { alert('Delete failed: ' + e.message); }
+  });
+
+  // ===== AI procedure generator =====
+  $('#ai-show').addEventListener('click', () => {
+    $('#ai-panel').style.display = 'block';
+    $('#ai-prompt').focus();
+  });
+  $('#ai-cancel').addEventListener('click', () => {
+    $('#ai-panel').style.display = 'none';
+    $('#ai-status').textContent = '';
+  });
+  $('#ai-generate').addEventListener('click', async () => {
+    const prompt = $('#ai-prompt').value.trim();
+    if (!prompt) { $('#ai-status').textContent = 'Please describe the procedure first.'; return; }
+    $('#ai-status').textContent = 'Generating…';
+    $('#ai-generate').disabled = true;
+    try {
+      const result = await apiFetch('/api/procedures/generate', {
+        method: 'POST', body: JSON.stringify({ prompt }),
+      });
+      if (result.name && !$('#pb-name').value.trim()) $('#pb-name').value = result.name;
+      if (result.description && !$('#pb-description').value.trim()) $('#pb-description').value = result.description;
+      if (Array.isArray(result.fields)) {
+        state.pbFields = result.fields.map(f => ({
+          id: 'f_' + Math.random().toString(36).slice(2, 9),
+          label: f.label || '',
+          type: f.type || 'checkbox',
+          required: !!f.required,
+        }));
+        renderPBFields();
+      }
+      $('#ai-status').textContent = `Added ${result.fields?.length || 0} fields. Review and edit as needed.`;
+      $('#ai-panel').style.display = 'none';
+    } catch (e) {
+      $('#ai-status').textContent = 'Error: ' + e.message;
+    } finally {
+      $('#ai-generate').disabled = false;
+    }
+  });
+<!-- ===== PART C END ===== -->
+<!-- ===== PART D START ===== -->
+  // ===== AI Assistant Chat Panel =====
+  const chatState = {
+    messages: [],   // [{ role: 'user'|'assistant', content: string, toolCalls?: [...], pendingConfirmations?: [...] }]
+    busy: false,
+  };
+
+  const SUGGESTIONS = [
+    'Show me my work orders',
+    'Create a work order titled "Fix leaking faucet" priority high assigned to bill',
+    'List my procedures',
+    'How many work orders are open?',
+  ];
+
+  function chatPanel() { return $('#chat-panel'); }
+
+  function toggleChat(force) {
+    const panel = chatPanel();
+    const open = force != null ? force : !panel.classList.contains('open');
+    panel.classList.toggle('open', open);
+    document.body.classList.toggle('chat-open', open);
+    if (open) {
+      renderChatScroll();
+      setTimeout(() => $('#chat-input').focus(), 100);
+    }
+  }
+
+  $('#chat-fab').addEventListener('click', () => toggleChat());
+  $('#chat-close').addEventListener('click', () => toggleChat(false));
+  $('#chat-clear').addEventListener('click', () => {
+    if (!chatState.messages.length) return;
+    if (!confirm('Clear chat history?')) return;
+    chatState.messages = [];
+    renderChatScroll();
+  });
+
+  function renderChatScroll() {
+    const scroll = $('#chat-scroll');
+    scroll.innerHTML = '';
+    if (!chatState.messages.length) {
+      const empty = el('div', { class: 'chat-empty' },
+        el('div', { class: 'chat-empty-title' }, '✨ AI Assistant'),
+        el('div', { class: 'chat-empty-sub' }, 'Ask me to create, find, or update work orders and procedures.'),
+        el('div', { class: 'chat-suggestions' },
+          ...SUGGESTIONS.map(s => el('button', {
+            class: 'chat-suggestion',
+            type: 'button',
+            onclick: () => { $('#chat-input').value = s; sendMessage(); }
+          }, s))
+        ),
+      );
+      scroll.appendChild(empty);
+      return;
+    }
+    chatState.messages.forEach(msg => {
+      if (msg.role === 'user') {
+        scroll.appendChild(el('div', { class: 'chat-msg chat-msg-user' },
+          el('div', { class: 'chat-bubble chat-bubble-user' }, msg.content)
+        ));
+      } else if (msg.role === 'assistant') {
+        const wrap = el('div', { class: 'chat-msg chat-msg-assistant' });
+        if (msg.content) {
+          wrap.appendChild(el('div', { class: 'chat-bubble chat-bubble-assistant' }, msg.content));
+        }
+        if (Array.isArray(msg.toolCalls)) {
+          msg.toolCalls.forEach(tc => {
+            const status = tc.status || 'done';
+            wrap.appendChild(el('div', { class: `chat-tool-pill chat-tool-${status}` },
+              el('span', { class: 'chat-tool-icon' }, status === 'cancelled' ? '✕' : '⚙'),
+              el('span', { class: 'chat-tool-name' }, tc.name),
+              tc.summary ? el('span', { class: 'chat-tool-summary' }, tc.summary) : null,
+            ));
+          });
+        }
+        if (Array.isArray(msg.pendingConfirmations)) {
+          msg.pendingConfirmations.forEach(pc => {
+            wrap.appendChild(renderConfirmationCard(pc));
+          });
+        }
+        scroll.appendChild(wrap);
+      }
+    });
+    if (chatState.busy) {
+      scroll.appendChild(el('div', { class: 'chat-msg chat-msg-assistant' },
+        el('div', { class: 'chat-typing' },
+          el('span', { class: 'dot' }), el('span', { class: 'dot' }), el('span', { class: 'dot' }),
+        )
+      ));
+    }
+    scroll.scrollTop = scroll.scrollHeight;
+  }
+
+  function renderConfirmationCard(pc) {
+    const card = el('div', { class: 'chat-confirm-card' });
+    card.appendChild(el('div', { class: 'chat-confirm-title' }, '⚠️ Confirm destructive action'));
+    card.appendChild(el('div', { class: 'chat-confirm-tool' }, pc.name));
+    if (pc.input) {
+      const summary = Object.entries(pc.input).map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`).join('  ·  ');
+      card.appendChild(el('div', { class: 'chat-confirm-input' }, summary));
+    }
+    card.appendChild(el('div', { class: 'chat-confirm-actions' },
+      el('button', { class: 'btn btn-danger btn-sm', onclick: () => confirmTool(pc.toolUseId) }, 'Confirm'),
+      el('button', { class: 'btn btn-ghost btn-sm', onclick: () => cancelTool(pc.toolUseId) }, 'Cancel'),
+    ));
+    return card;
+  }
+
+  async function sendMessage() {
+    if (chatState.busy) return;
+    const input = $('#chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    input.style.height = 'auto';
+    chatState.messages.push({ role: 'user', content: text });
+    chatState.busy = true;
+    renderChatScroll();
+    try {
+      await callAssistant({ userMessage: text });
+    } catch (e) {
+      chatState.messages.push({ role: 'assistant', content: 'Error: ' + e.message });
+    } finally {
+      chatState.busy = false;
+      renderChatScroll();
+    }
+  }
+
+  async function callAssistant(opts) {
+    // Build history from chatState.messages (simple text-only history; backend keeps tool history server-side via reply)
+    const history = chatState.messages
+      .filter(m => m.role === 'user' || (m.role === 'assistant' && m.content))
+      .map(m => ({ role: m.role, content: m.content }));
+    const body = {
+      messages: history,
     };
+    if (opts && opts.confirmedToolUseIds) body.confirmedToolUseIds = opts.confirmedToolUseIds;
+    const result = await apiFetch('/api/assistant', {
+      method: 'POST', body: JSON.stringify(body),
+    });
+    // Expected shape: { reply: string, toolCalls: [{name, summary, status}], pendingConfirmations: [{toolUseId, name, input}], dataChanged: bool }
+    const assistantMsg = {
+      role: 'assistant',
+      content: result.reply || '',
+      toolCalls: result.toolCalls || [],
+      pendingConfirmations: result.pendingConfirmations || [],
+    };
+    chatState.messages.push(assistantMsg);
+    if (result.dataChanged && typeof window.__wopro_refresh === 'function') {
+      window.__wopro_refresh();
+    }
+  }
+
+  async function confirmTool(toolUseId) {
+    if (chatState.busy) return;
+    // Remove the pending confirmation from the last assistant message
+    const last = [...chatState.messages].reverse().find(m => m.role === 'assistant' && m.pendingConfirmations);
+    if (last) {
+      last.pendingConfirmations = (last.pendingConfirmations || []).filter(pc => pc.toolUseId !== toolUseId);
+    }
+    chatState.busy = true;
+    renderChatScroll();
     try {
-      if (state.editingProc) await apiFetch("/procedures/" + state.editingProc.id, { method: "PUT", body: payload });
-      else await apiFetch("/procedures", { method: "POST", body: payload });
-      closeModal("proc-builder-modal");
-      await refreshAll();
-    } catch (e) { alert("Save failed: " + e.message); }
+      await callAssistant({ confirmedToolUseIds: [toolUseId] });
+    } catch (e) {
+      chatState.messages.push({ role: 'assistant', content: 'Error: ' + e.message });
+    } finally {
+      chatState.busy = false;
+      renderChatScroll();
+    }
+  }
+
+  function cancelTool(toolUseId) {
+    const last = [...chatState.messages].reverse().find(m => m.role === 'assistant' && m.pendingConfirmations);
+    if (last) {
+      last.pendingConfirmations = (last.pendingConfirmations || []).filter(pc => pc.toolUseId !== toolUseId);
+      // Add a synthetic note
+      if (!last.toolCalls) last.toolCalls = [];
+      last.toolCalls.push({ name: 'cancelled', summary: 'destructive action declined', status: 'cancelled' });
+    }
+    renderChatScroll();
+  }
+
+  // Send button + Enter handling + auto-grow
+  $('#chat-send').addEventListener('click', () => sendMessage());
+  $('#chat-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+  $('#chat-input').addEventListener('input', (e) => {
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px';
   });
 
-  $("#pb-delete").addEventListener("click", async () => {
-    const p = state.editingProc; if (!p) return;
-    if (!confirm("Delete procedure '" + p.name + "'? Already-attached instances on work orders are not affected.")) return;
-    try {
-      await apiFetch("/procedures/" + p.id, { method: "DELETE" });
-      closeModal("proc-builder-modal");
-      await refreshAll();
-    } catch (e) { alert("Delete failed: " + e.message); }
-  });
-
-  // ---------- Boot ----------
+  // ===== Boot =====
   if (getCurrentUser()) showApp(); else showLogin();
 })();
 </script>
 </body>
 </html>
-<!-- ===== PART 2B END ===== -->
+<!-- ===== PART D END ===== -->
