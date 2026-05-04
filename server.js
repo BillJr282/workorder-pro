@@ -15,7 +15,29 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json({ limit: "10mb" }));
 
 // ---------- Data layer ----------
-const DATA_FILE = path.join(__dirname, "data.json");
+// DATA_DIR lets us point storage at a Railway volume mount (e.g. /data).
+// If unset, falls back to the project root for local dev.
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (_) {}
+const DATA_FILE = path.join(DATA_DIR, "data.json");
+
+// One-time migration: if DATA_DIR is set and we have no data.json there yet,
+// but a legacy data.json exists in the repo root, copy it in so we don't lose it.
+(function migrateLegacyDataFile() {
+  try {
+    if (DATA_DIR === __dirname) return; // nothing to migrate
+    if (fs.existsSync(DATA_FILE)) return; // volume already has data
+    const legacy = path.join(__dirname, "data.json");
+    if (fs.existsSync(legacy)) {
+      fs.copyFileSync(legacy, DATA_FILE);
+      console.log(`[startup] Migrated data.json from repo root to ${DATA_FILE}`);
+    }
+  } catch (e) {
+    console.error("[startup] data.json migration failed:", e.message);
+  }
+})();
+
+console.log(`[startup] DATA_FILE = ${DATA_FILE}`);
 
 function loadData() {
   let data;
