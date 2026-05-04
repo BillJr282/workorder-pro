@@ -1218,6 +1218,47 @@
 
   // ---------- Procedure Builder ----------
   $("#new-proc-btn").addEventListener("click", () => openProcedureBuilder(null));
+  // ---------- AI Generate ----------
+  const aiPanel = $("#ai-panel-wrap");
+  const aiShow = $("#ai-show");
+  const aiCancel = $("#ai-cancel");
+  const aiGenerate = $("#ai-generate");
+  const aiPrompt = $("#ai-prompt");
+  const aiStatus = $("#ai-status");
+
+  aiShow.addEventListener("click", () => {
+    aiPanel.style.display = "";
+    aiShow.style.display = "none";
+    aiPrompt.focus();
+  });
+  aiCancel.addEventListener("click", () => {
+    aiPanel.style.display = "none";
+    aiShow.style.display = "";
+    aiStatus.textContent = "";
+  });
+
+  aiGenerate.addEventListener("click", async () => {
+    const prompt = aiPrompt.value.trim();
+    if (!prompt) { aiStatus.textContent = "Please describe the procedure first."; return; }
+    aiGenerate.disabled = true;
+    aiStatus.textContent = "Generating… (5–15 seconds)";
+    try {
+      const r = await apiFetch("/procedures/generate", { method: "POST", body: { prompt } });
+      $("#pb-name").value = r.name || "";
+      $("#pb-desc").value = r.description || "";
+      state.pbFields = (r.fields || []).map(f => ({
+        type: f.type,
+        label: f.label,
+        required: !!f.required,
+      }));
+      renderPBFields();
+      aiStatus.textContent = "Generated " + state.pbFields.length + " fields. Review and edit, then Save.";
+    } catch (e) {
+      aiStatus.textContent = "Failed: " + e.message;
+    } finally {
+      aiGenerate.disabled = false;
+    }
+  });
 
   function openProcedureBuilder(p) {
     state.editingProc = p;
@@ -1226,6 +1267,11 @@
     $("#pb-desc").value = p ? (p.description || "") : "";
     state.pbFields = p ? p.fields.map(f => ({ ...f })) : [];
     $("#pb-delete").style.display = p ? "" : "none";
+    // Reset AI panel
+    $("#ai-panel-wrap").style.display = "none";
+    $("#ai-show").style.display = p ? "none" : "";
+    $("#ai-prompt").value = "";
+    $("#ai-status").textContent = "";
     renderPBFields();
     openModal("proc-builder-modal");
   }
