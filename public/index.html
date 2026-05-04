@@ -1547,6 +1547,12 @@
     }
   }
 
+  // Tools that mutate data (auto-trigger UI refresh)
+  const MUTATING_TOOLS = new Set([
+    'create_work_order','update_work_order','delete_work_order',
+    'create_procedure','attach_procedure','detach_procedure','mark_procedure_complete',
+  ]);
+
   async function callAssistant(opts) {
     const history = chatState.messages
       .filter(m => m.role === 'user' || (m.role === 'assistant' && m.content))
@@ -1556,14 +1562,27 @@
     const result = await apiFetch('/api/assistant', {
       method: 'POST', body: JSON.stringify(body),
     });
+    // Map backend fields: assistantText -> content, toolEvents -> toolCalls
+    const events = Array.isArray(result.toolEvents) ? result.toolEvents : [];
+    const toolCalls = events.map(ev => {
+      let summary = '';
+      if (Array.isArray(ev.result)) summary = `${ev.result.length} item${ev.result.length === 1 ? '' : 's'}`;
+      else if (ev.result && typeof ev.result === 'object') {
+        if (ev.result.title) summary = ev.result.title;
+        else if (ev.result.name) summary = ev.result.name;
+        else if (ev.result.id) summary = ev.result.id.substring(0, 8);
+      } else if (typeof ev.result === 'string') summary = ev.result.substring(0, 60);
+      return { name: ev.name, summary, status: 'done' };
+    });
     const assistantMsg = {
       role: 'assistant',
-      content: result.reply || '',
-      toolCalls: result.toolCalls || [],
+      content: result.assistantText || result.reply || '',
+      toolCalls,
       pendingConfirmations: result.pendingConfirmations || [],
     };
     chatState.messages.push(assistantMsg);
-    if (result.dataChanged && typeof window.__wopro_refresh === 'function') {
+    const dataChanged = events.some(ev => MUTATING_TOOLS.has(ev.name));
+    if (dataChanged && typeof window.__wopro_refresh === 'function') {
       window.__wopro_refresh();
     }
   }
