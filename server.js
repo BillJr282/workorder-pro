@@ -637,6 +637,37 @@ app.post("/api/assistant", async (req, res) => {
   const toolEvents = [];
   const pendingConfirmations = [];
 
+  // Replay confirmed destructive tool calls: scan history for prior pending tool_results,
+  // find their matching tool_use blocks, run them now, and rewrite the tool_result content.
+  if (confirmed.size > 0) {
+    for (const msg of messages) {
+      if (msg.role !== "user" || !Array.isArray(msg.content)) continue;
+      for (const block of msg.content) {
+        if (block.type !== "tool_result" || !confirmed.has(block.tool_use_id)) continue;
+        // Find the tool_use definition in any earlier assistant message
+        let toolUse = null;
+        for (const m of messages) {
+          if (m.role !== "assistant" || !Array.isArray(m.content)) continue;
+          const found = m.content.find(b => b.type === "tool_use" && b.id === block.tool_use_id);
+          if (found) { toolUse = found; break; }
+        }
+        if (!toolUse) continue;
+        const tool = TOOL_BY_NAME[toolUse.name];
+        if (!tool) continue;
+        try {
+          const result = tool.run(toolUse.input || {});
+          toolEvents.push({ name: toolUse.name, input: toolUse.input, result, confirmed: true });
+          block.content = JSON.stringify(result).slice(0, 8000);
+          block.is_error = false;
+        } catch (e) {
+          toolEvents.push({ name: toolUse.name, input: toolUse.input, error: e.message, confirmed: true });
+          block.content = "Error: " + e.message;
+          block.is_error = true;
+        }
+      }
+    }
+  }
+
   const startTs = Date.now();
   const TIMEOUT_MS = 60_000;
   const MAX_LOOPS = 8;
