@@ -1423,10 +1423,10 @@
 <!-- ===== PART D2 START ===== -->
   // ===== AI Assistant Chat Panel =====
   const chatState = {
-    messages: [],
+    messages: [],          // Display messages (for UI rendering)
+    apiHistory: [],        // Canonical message history from backend (with tool_use/tool_result blocks)
     busy: false,
   };
-
   const SUGGESTIONS = [
     'Show me my work orders',
     'Create a work order titled "Fix leaking faucet" priority high assigned to bill',
@@ -1451,6 +1451,7 @@
     if (!chatState.messages.length) return;
     if (!confirm('Clear chat history?')) return;
     chatState.messages = [];
+    chatState.apiHistory = [];
     renderChatScroll();
   });
 
@@ -1554,14 +1555,24 @@
   ]);
 
   async function callAssistant(opts) {
-    const history = chatState.messages
-      .filter(m => m.role === 'user' || (m.role === 'assistant' && m.content))
-      .map(m => ({ role: m.role, content: m.content }));
-    const body = { messages: history };
+    // Build messages to send: prefer canonical apiHistory; append the latest user message if not already there
+    let messagesToSend;
+    if (opts && opts.confirmedToolUseIds && chatState.apiHistory.length) {
+      // Confirmation: send the full canonical history with tool_use/tool_result blocks
+      messagesToSend = chatState.apiHistory;
+    } else {
+      // New user turn: take canonical history and append the new user message
+      const lastUser = [...chatState.messages].reverse().find(m => m.role === 'user');
+      messagesToSend = [...chatState.apiHistory];
+      if (lastUser) messagesToSend.push({ role: 'user', content: lastUser.content });
+    }
+    const body = { messages: messagesToSend };
     if (opts && opts.confirmedToolUseIds) body.confirmedToolUseIds = opts.confirmedToolUseIds;
     const result = await apiFetch('/api/assistant', {
       method: 'POST', body: JSON.stringify(body),
     });
+    // Save canonical history for next turn
+    if (Array.isArray(result.messages)) chatState.apiHistory = result.messages;
     // Map backend fields: assistantText -> content, toolEvents -> toolCalls
     const events = Array.isArray(result.toolEvents) ? result.toolEvents : [];
     const toolCalls = events.map(ev => {
