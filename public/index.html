@@ -1428,8 +1428,8 @@
     busy: false,
   };
   const SUGGESTIONS = [
-    'Show me my work orders',
-    'Create a work order titled "Fix leaking faucet" priority high assigned to bill',
+    'List my work orders',
+    'Create a work order: Replace fluorescent bulbs in warehouse, medium priority',
     'List my procedures',
     'How many work orders are open?',
   ];
@@ -1511,16 +1511,35 @@
     scroll.scrollTop = scroll.scrollHeight;
   }
 
+  function friendlySummary(pc) {
+    const inp = pc.input || {};
+    // Try to look up entity title/name from local state for human-readable summary
+    if (inp.id) {
+      if (pc.name === 'delete_work_order') {
+        const wo = state.workorders.find(w => w.id === inp.id);
+        if (wo && wo.title) return `Work order: "${wo.title}"`;
+      } else if (pc.name === 'detach_procedure' && inp.workOrderId) {
+        const wo = state.workorders.find(w => w.id === inp.workOrderId);
+        if (wo) return `Procedure on work order "${wo.title}"`;
+      }
+    }
+    // Fallback: pretty key:value pairs
+    return Object.entries(inp).map(([k, v]) =>
+      `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`
+    ).join('  ·  ');
+  }
+
+  const TOOL_LABELS = {
+    delete_work_order: 'Delete work order',
+    detach_procedure: 'Detach procedure',
+  };
+
   function renderConfirmationCard(pc) {
     const card = el('div', { class: 'chat-confirm-card' });
     card.appendChild(el('div', { class: 'chat-confirm-title' }, '⚠️ Confirm destructive action'));
-    card.appendChild(el('div', { class: 'chat-confirm-tool' }, pc.name));
-    if (pc.input) {
-      const summary = Object.entries(pc.input).map(([k, v]) =>
-        `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`
-      ).join('  ·  ');
-      card.appendChild(el('div', { class: 'chat-confirm-input' }, summary));
-    }
+    card.appendChild(el('div', { class: 'chat-confirm-tool' }, TOOL_LABELS[pc.name] || pc.name));
+    const summary = friendlySummary(pc);
+    if (summary) card.appendChild(el('div', { class: 'chat-confirm-input' }, summary));
     card.appendChild(el('div', { class: 'chat-confirm-actions' },
       el('button', { class: 'btn btn-danger btn-sm', onclick: () => confirmTool(pc.toolUseId) }, 'Confirm'),
       el('button', { class: 'btn btn-secondary btn-sm', onclick: () => cancelTool(pc.toolUseId) }, 'Cancel'),
@@ -1585,9 +1604,14 @@
       } else if (typeof ev.result === 'string') summary = ev.result.substring(0, 60);
       return { name: ev.name, summary, status: 'done' };
     });
+    let content = result.assistantText || result.reply || '';
+    // Suppress the echoed prior assistant text on confirmation replay
+    if (opts && opts.suppressContent && content === opts.suppressContent) {
+      content = '';
+    }
     const assistantMsg = {
       role: 'assistant',
-      content: result.assistantText || result.reply || '',
+      content,
       toolCalls,
       pendingConfirmations: result.pendingConfirmations || [],
     };
@@ -1600,14 +1624,17 @@
 
   async function confirmTool(toolUseId) {
     if (chatState.busy) return;
+    // Find and clear the pending confirmation; also remember the prior assistant text so we can suppress its re-echo
+    let priorContent = null;
     const last = [...chatState.messages].reverse().find(m => m.role === 'assistant' && m.pendingConfirmations);
     if (last) {
       last.pendingConfirmations = (last.pendingConfirmations || []).filter(pc => pc.toolUseId !== toolUseId);
+      priorContent = last.content;
     }
     chatState.busy = true;
     renderChatScroll();
     try {
-      await callAssistant({ confirmedToolUseIds: [toolUseId] });
+      await callAssistant({ confirmedToolUseIds: [toolUseId], suppressContent: priorContent });
     } catch (e) {
       chatState.messages.push({ role: 'assistant', content: 'Error: ' + e.message });
     } finally {
