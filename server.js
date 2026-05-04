@@ -4,15 +4,21 @@
 // Routes: /api/workorders, /api/procedures (CRUD), AI generator,
 //         AI assistant with tool use
 
+// ===== TICKET 10 PART 1 START =====
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const { v4: uuidv4 } = require("uuid");
+const bcrypt = require("bcryptjs");
+const cookieParser = require("cookie-parser");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: "10mb" }));
+app.use(cookieParser());
+// ===== TICKET 10 PART 1 END (block A) =====
 
 // ---------- Data layer ----------
 // DATA_DIR lets us point storage at a Railway volume mount (e.g. /data).
@@ -46,9 +52,23 @@ function loadData() {
     data = JSON.parse(raw);
   } catch (e) {
     data = {};
+  function loadData() {
+  let data;
+  try {
+    const raw = fs.readFileSync(DATA_FILE, "utf8");
+    data = JSON.parse(raw);
+  } catch (e) {
+    data = {};
   }
   if (!Array.isArray(data.workorders)) data.workorders = [];
   if (!Array.isArray(data.procedures)) data.procedures = [];
+  // ---- Ticket 10: users + sessions ----
+  if (!Array.isArray(data.users)) data.users = [];
+  if (!Array.isArray(data.sessions)) data.sessions = [];
+  // Prune expired sessions on every load
+  const now = Date.now();
+  data.sessions = data.sessions.filter(s => !s.expiresAt || s.expiresAt > now);
+  data.workorders.forEach((w) => {
   data.workorders.forEach((w) => {
     if (!Array.isArray(w.procedures)) w.procedures = [];
     if (!Array.isArray(w.activity)) w.activity = [];
@@ -182,6 +202,92 @@ function applyWorkOrderUpdates(wo, body) {
   if (changed.length) wo.totals = computeTotals(wo);
   return changed;
 }
+    // ---------- Ticket 10: Auth helpers + middleware ----------
+const SESSION_COOKIE = "wopsid";
+const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
+const ALLOWED_ROLES = ["admin", "tech"];
+
+function publicUser(u) {
+  if (!u) return null;
+  return { id: u.id, username: u.username, displayName: u.displayName, role: u.role, createdAt: u.createdAt };
+}
+
+function findUserByUsername(data, username) {
+  if (!username) return null;
+  const lc = String(username).toLowerCase();
+  return data.users.find(u => u.username.toLowerCase() === lc) || null;
+}
+
+function newSessionId() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+function createSession(data, userId) {
+  const sid = newSessionId();
+  const session = { id: sid, userId, createdAt: Date.now(), expiresAt: Date.now() + SESSION_TTL_MS };
+  data.sessions.push(session);
+  return session;
+}
+
+function destroySession(data, sid) {
+  const idx = data.sessions.findIndex(s => s.id === sid);
+  if (idx !== -1) data.sessions.splice(idx, 1);
+}
+
+function getSessionUser(data, req) {
+  const sid = req.cookies && req.cookies[SESSION_COOKIE];
+  if (!sid) return null;
+  const session = data.sessions.find(s => s.id === sid);
+  if (!session) return null;
+  if (session.expiresAt && session.expiresAt < Date.now()) return null;
+  const user = data.users.find(u => u.id === session.userId);
+  return user || null;
+}
+
+function setSessionCookie(res, sid) {
+  res.cookie(SESSION_COOKIE, sid, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    maxAge: SESSION_TTL_MS,
+    path: "/",
+  });
+}
+
+function clearSessionCookie(res) {
+  res.clearCookie(SESSION_COOKIE, { path: "/" });
+}
+
+// Routes that don't require auth
+const PUBLIC_PATHS = new Set([
+  "/api/health",
+  "/api/setup-status",
+  "/api/setup",
+  "/api/login",
+  "/api/logout",
+  "/api/me",
+]);
+
+function requireAuth(req, res, next) {
+  if (!req.path.startsWith("/api/")) return next();
+  if (PUBLIC_PATHS.has(req.path)) return next();
+  const data = loadData();
+  const user = getSessionUser(data, req);
+  if (!user) return res.status(401).json({ error: "Not authenticated" });
+  req.currentUser = user;
+  req.dataCache = data;
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (!req.currentUser || req.currentUser.role !== "admin") {
+    return res.status(403).json({ error: "Admin role required" });
+  }
+  next();
+}
+
+app.use(requireAuth);
+// ===== TICKET 10 PART 1 END (block B) =====
 // ---------- Health ----------
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, ts: new Date().toISOString() });
@@ -388,7 +494,96 @@ app.patch("/api/workorders/:id/procedures/:instanceId", (req, res) => {
 });
 // ===== PART 1 END =====
 // ===== PART 2 START =====
+// ===== TICKET 10 PART 2 START =====
+// ---------- Auth endpoints ----------
 
+// Tells frontend whether the system has been initialized
+app.get("/api/setup-status", (req, res) => {
+  const data = loadData();
+  res.json({ needsSetup: data.users.length === 0 });
+});
+
+// First-admin bootstrap. Only works while users[] is empty.
+app.post("/api/setup", async (req, res) => {
+  const data = loadData();
+  if (data.users.length > 0) {
+    return res.status(400).json({ error: "Setup already complete" });
+  }
+  const { username, password, displayName } = req.body || {};
+  if (!username || typeof username !== "string" || !/^[a-zA-Z0-9_.-]{2,32}$/.test(username)) {
+    return res.status(400).json({ error: "Invalid username (2-32 chars: letters, numbers, . _ -)" });
+  }
+  if (!password || typeof password !== "string" || password.length < 8) {
+    return res.status(400).json({ error: "Password must be at least 8 characters" });
+  }
+  try {
+    const hash = await bcrypt.hash(password, 10);
+    const user = {
+      id: uuidv4(),
+      username: username.trim(),
+      displayName: (displayName && String(displayName).trim()) || username.trim(),
+      role: "admin",
+      passwordHash: hash,
+      createdAt: new Date().toISOString(),
+    };
+    data.users.push(user);
+    const session = createSession(data, user.id);
+    saveData(data);
+    setSessionCookie(res, session.id);
+    res.status(201).json({ user: publicUser(user) });
+  } catch (e) {
+    console.error("Setup error", e);
+    res.status(500).json({ error: "Setup failed" });
+  }
+});
+
+// Login
+app.post("/api/login", async (req, res) => {
+  const data = loadData();
+  if (data.users.length === 0) {
+    return res.status(400).json({ error: "System not initialized. Complete setup first." });
+  }
+  const { username, password } = req.body || {};
+  if (!username || !password) {
+    return res.status(400).json({ error: "username and password required" });
+  }
+  const user = findUserByUsername(data, username);
+  if (!user) {
+    // constant-time-ish to avoid leaking whether username exists
+    await bcrypt.compare("dummy", "$2a$10$abcdefghijklmnopqrstuv");
+    return res.status(401).json({ error: "Invalid username or password" });
+  }
+  const ok = await bcrypt.compare(password, user.passwordHash || "");
+  if (!ok) {
+    return res.status(401).json({ error: "Invalid username or password" });
+  }
+  const session = createSession(data, user.id);
+  saveData(data);
+  setSessionCookie(res, session.id);
+  res.json({ user: publicUser(user) });
+});
+
+// Logout
+app.post("/api/logout", (req, res) => {
+  const data = loadData();
+  const sid = req.cookies && req.cookies[SESSION_COOKIE];
+  if (sid) {
+    destroySession(data, sid);
+    saveData(data);
+  }
+  clearSessionCookie(res);
+  res.json({ ok: true });
+});
+
+// Who am I
+app.get("/api/me", (req, res) => {
+  const data = loadData();
+  const user = getSessionUser(data, req);
+  if (!user) return res.status(401).json({ error: "Not authenticated" });
+  res.json({ user: publicUser(user) });
+});
+
+// ===== TICKET 10 PART 2 END =====
 // ---------- AI: Procedure Generator (existing) ----------
 const AI_PROCEDURE_SYSTEM_PROMPT = `You are an expert in industrial maintenance, safety inspections, and equipment service procedures. You design checklist-style procedures used by technicians.
 
@@ -1214,7 +1409,117 @@ app.post("/api/assistant", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+// ===== TICKET 10 PART 3 START =====
+// ---------- Users (admin-only) ----------
 
+// List all users (admin-only). Sessions are not exposed.
+app.get("/api/users", requireAdmin, (req, res) => {
+  const data = req.dataCache || loadData();
+  const list = data.users
+    .map(publicUser)
+    .sort((a, b) => a.username.localeCompare(b.username));
+  res.json(list);
+});
+
+// Create a new user (admin-only)
+app.post("/api/users", requireAdmin, async (req, res) => {
+  const data = loadData();
+  const { username, password, displayName, role } = req.body || {};
+  if (!username || typeof username !== "string" || !/^[a-zA-Z0-9_.-]{2,32}$/.test(username)) {
+    return res.status(400).json({ error: "Invalid username (2-32 chars: letters, numbers, . _ -)" });
+  }
+  if (!password || typeof password !== "string" || password.length < 8) {
+    return res.status(400).json({ error: "Password must be at least 8 characters" });
+  }
+  if (!ALLOWED_ROLES.includes(role)) {
+    return res.status(400).json({ error: "Role must be admin or tech" });
+  }
+  if (findUserByUsername(data, username)) {
+    return res.status(409).json({ error: "Username already exists" });
+  }
+  try {
+    const hash = await bcrypt.hash(password, 10);
+    const user = {
+      id: uuidv4(),
+      username: username.trim(),
+      displayName: (displayName && String(displayName).trim()) || username.trim(),
+      role,
+      passwordHash: hash,
+      createdAt: new Date().toISOString(),
+    };
+    data.users.push(user);
+    saveData(data);
+    res.status(201).json(publicUser(user));
+  } catch (e) {
+    console.error("Create user error", e);
+    res.status(500).json({ error: "Failed to create user" });
+  }
+});
+
+// Update a user (admin-only). Body may include any of: displayName, role, password.
+app.put("/api/users/:id", requireAdmin, async (req, res) => {
+  const data = loadData();
+  const user = data.users.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  const { displayName, role, password } = req.body || {};
+
+  // Last-admin guard: don't let an admin demote themselves if they're the only admin
+  if (role !== undefined && role !== user.role) {
+    if (!ALLOWED_ROLES.includes(role)) {
+      return res.status(400).json({ error: "Role must be admin or tech" });
+    }
+    if (user.role === "admin" && role !== "admin") {
+      const adminCount = data.users.filter(u => u.role === "admin").length;
+      if (adminCount <= 1) {
+        return res.status(400).json({ error: "Cannot demote the last admin" });
+      }
+    }
+    user.role = role;
+  }
+
+  if (displayName !== undefined) {
+    user.displayName = (String(displayName).trim()) || user.username;
+  }
+
+  if (password !== undefined) {
+    if (typeof password !== "string" || password.length < 8) {
+      return res.status(400).json({ error: "Password must be at least 8 characters" });
+    }
+    user.passwordHash = await bcrypt.hash(password, 10);
+    // Invalidate all sessions for this user when password changes
+    data.sessions = data.sessions.filter(s => s.userId !== user.id);
+  }
+
+  saveData(data);
+  res.json(publicUser(user));
+});
+
+// Delete a user (admin-only). Cannot delete self or last admin.
+app.delete("/api/users/:id", requireAdmin, (req, res) => {
+  const data = loadData();
+  const idx = data.users.findIndex(u => u.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "User not found" });
+  const target = data.users[idx];
+
+  if (req.currentUser && target.id === req.currentUser.id) {
+    return res.status(400).json({ error: "Cannot delete your own account" });
+  }
+  if (target.role === "admin") {
+    const adminCount = data.users.filter(u => u.role === "admin").length;
+    if (adminCount <= 1) {
+      return res.status(400).json({ error: "Cannot delete the last admin" });
+    }
+  }
+
+  data.users.splice(idx, 1);
+  // Invalidate all sessions for the deleted user
+  data.sessions = data.sessions.filter(s => s.userId !== target.id);
+  saveData(data);
+  res.json({ ok: true, removed: publicUser(target) });
+});
+
+// ===== TICKET 10 PART 3 END =====
 // ---------- Static files (must come AFTER API routes) ----------
 app.use(express.static(path.join(__dirname, "public")));
 
