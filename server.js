@@ -30,6 +30,26 @@ function loadData() {
   data.workorders.forEach((w) => {
     if (!Array.isArray(w.procedures)) w.procedures = [];
     if (!Array.isArray(w.activity)) w.activity = [];
+    // ---- Ticket 8 migration: customer / asset / parts / labor / costs / totals ----
+    if (typeof w.customerName !== "string") w.customerName = "";
+    if (typeof w.workType !== "string") w.workType = "";
+    if (!w.asset || typeof w.asset !== "object") {
+      w.asset = { name: "", serialNumber: "", unitNumber: "", hours: null, make: "", model: "" };
+    } else {
+      if (typeof w.asset.name !== "string") w.asset.name = "";
+      if (typeof w.asset.serialNumber !== "string") w.asset.serialNumber = "";
+      if (typeof w.asset.unitNumber !== "string") w.asset.unitNumber = "";
+      if (w.asset.hours === undefined) w.asset.hours = null;
+      if (typeof w.asset.make !== "string") w.asset.make = "";
+      if (typeof w.asset.model !== "string") w.asset.model = "";
+    }
+    if (!Array.isArray(w.parts)) w.parts = [];
+    if (!Array.isArray(w.labor)) w.labor = [];
+    if (!Array.isArray(w.otherCosts)) w.otherCosts = [];
+    w.parts = w.parts.map(normalizePart);
+    w.labor = w.labor.map(normalizeLabor);
+    w.otherCosts = w.otherCosts.map(normalizeOtherCost);
+    w.totals = computeTotals(w);
   });
   return data;
 }
@@ -42,7 +62,104 @@ function logActivity(wo, message) {
   wo.activity = wo.activity || [];
   wo.activity.push({ id: uuidv4(), at: new Date().toISOString(), message });
 }
+// ---------- Ticket 8 helpers: parts / labor / costs / totals ----------
+const ALLOWED_WORK_TYPES = ["", "repair", "install", "maintenance", "inspection"];
 
+function n(v) {
+  const x = Number(v);
+  return Number.isFinite(x) ? x : 0;
+}
+function round2(x) {
+  return Math.round(x * 100) / 100;
+}
+
+function normalizePart(p) {
+  p = p || {};
+  const quantity = n(p.quantity);
+  const unitCost = n(p.unitCost);
+  return {
+    id: p.id || uuidv4(),
+    partNumber: typeof p.partNumber === "string" ? p.partNumber : "",
+    description: typeof p.description === "string" ? p.description : "",
+    quantity,
+    unitCost,
+    lineTotal: round2(quantity * unitCost),
+  };
+}
+
+function normalizeLabor(l) {
+  l = l || {};
+  const hours = n(l.hours);
+  const hourlyRate = n(l.hourlyRate);
+  return {
+    id: l.id || uuidv4(),
+    technician: typeof l.technician === "string" ? l.technician : "",
+    date: typeof l.date === "string" ? l.date : "",
+    hours,
+    hourlyRate,
+    lineTotal: round2(hours * hourlyRate),
+  };
+}
+
+function normalizeOtherCost(o) {
+  o = o || {};
+  return {
+    id: o.id || uuidv4(),
+    description: typeof o.description === "string" ? o.description : "",
+    amount: round2(n(o.amount)),
+  };
+}
+
+function normalizeAsset(a) {
+  a = a || {};
+  return {
+    name: typeof a.name === "string" ? a.name : "",
+    serialNumber: typeof a.serialNumber === "string" ? a.serialNumber : "",
+    unitNumber: typeof a.unitNumber === "string" ? a.unitNumber : "",
+    hours: a.hours === null || a.hours === "" || a.hours === undefined ? null : n(a.hours),
+    make: typeof a.make === "string" ? a.make : "",
+    model: typeof a.model === "string" ? a.model : "",
+  };
+}
+
+function computeTotals(wo) {
+  const parts = (wo.parts || []).reduce((s, p) => s + n(p.lineTotal), 0);
+  const labor = (wo.labor || []).reduce((s, l) => s + n(l.lineTotal), 0);
+  const other = (wo.otherCosts || []).reduce((s, o) => s + n(o.amount), 0);
+  const grand = parts + labor + other;
+  return { parts: round2(parts), labor: round2(labor), other: round2(other), grand: round2(grand) };
+}
+
+function applyWorkOrderUpdates(wo, body) {
+  // Mutates wo with any provided new-schema fields. Returns array of changed keys.
+  const changed = [];
+  if (body.customerName !== undefined && body.customerName !== wo.customerName) {
+    wo.customerName = String(body.customerName || "");
+    changed.push("customerName");
+  }
+  if (body.workType !== undefined) {
+    const wt = ALLOWED_WORK_TYPES.includes(body.workType) ? body.workType : "";
+    if (wt !== wo.workType) { wo.workType = wt; changed.push("workType"); }
+  }
+  if (body.asset !== undefined && body.asset && typeof body.asset === "object") {
+    wo.asset = normalizeAsset(body.asset);
+    changed.push("asset");
+  }
+  if (Array.isArray(body.parts)) {
+    wo.parts = body.parts.map(normalizePart);
+    changed.push("parts");
+  }
+  if (Array.isArray(body.labor)) {
+    wo.labor = body.labor.map(normalizeLabor);
+    changed.push("labor");
+  }
+  if (Array.isArray(body.otherCosts)) {
+    wo.otherCosts = body.otherCosts.map(normalizeOtherCost);
+    changed.push("otherCosts");
+  }
+  if (changed.length) wo.totals = computeTotals(wo);
+  return changed;
+}
 // ---------- Health ----------
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, ts: new Date().toISOString() });
@@ -63,7 +180,8 @@ app.get("/api/workorders/:id", (req, res) => {
 
 app.post("/api/workorders", (req, res) => {
   const data = loadData();
-  const { title, description, status, priority, assignee } = req.body || {};
+  const body = req.body || {};
+  const { title, description, status, priority, assignee } = body;
   if (!title) return res.status(400).json({ error: "title required" });
   const wo = {
     id: uuidv4(),
@@ -72,11 +190,19 @@ app.post("/api/workorders", (req, res) => {
     status: status || "open",
     priority: priority || "medium",
     assignee: assignee || "",
+    customerName: "",
+    workType: "",
+    asset: normalizeAsset({}),
+    parts: [],
+    labor: [],
+    otherCosts: [],
+    totals: { parts: 0, labor: 0, other: 0, grand: 0 },
     procedures: [],
     activity: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+  applyWorkOrderUpdates(wo, body);
   logActivity(wo, `Work order created: ${title}`);
   data.workorders.push(wo);
   saveData(data);
@@ -87,7 +213,8 @@ app.put("/api/workorders/:id", (req, res) => {
   const data = loadData();
   const wo = data.workorders.find((w) => w.id === req.params.id);
   if (!wo) return res.status(404).json({ error: "Not found" });
-  const { title, description, status, priority, assignee } = req.body || {};
+  const body = req.body || {};
+  const { title, description, status, priority, assignee } = body;
   if (title !== undefined) wo.title = title;
   if (description !== undefined) wo.description = description;
   if (status !== undefined && status !== wo.status) {
@@ -96,6 +223,7 @@ app.put("/api/workorders/:id", (req, res) => {
   }
   if (priority !== undefined) wo.priority = priority;
   if (assignee !== undefined) wo.assignee = assignee;
+  applyWorkOrderUpdates(wo, body);
   wo.updatedAt = new Date().toISOString();
   saveData(data);
   res.json(wo);
@@ -345,6 +473,21 @@ WORK ORDER FIELDS:
 - status: "open" | "in_progress" | "complete"
 - priority: "low" | "medium" | "high" | "urgent"
 - assignee: free-text name (current users are "bill" and "serina")
+- customerName: free-text customer name (e.g. "Acme Corp")
+- workType: "" | "repair" | "install" | "maintenance" | "inspection"
+- asset: { name, serialNumber, unitNumber, hours, make, model } — the equipment being worked on; hours captured at time of WO creation
+- parts: list of { partNumber, description, quantity, unitCost, lineTotal } — line items
+- labor: list of { technician, date, hours, hourlyRate, lineTotal } — all labor is billable
+- otherCosts: list of { description, amount } — travel, fees, subcontractors, etc.
+- totals: { parts, labor, other, grand } — server-computed in CAD; never set directly
+
+CURRENCY: All money values are CAD. No tax handling.
+
+TOOLS FOR LINE ITEMS:
+- Use add_part / add_labor / add_other_cost to append a single row to a work order.
+- Use remove_part / remove_labor / remove_other_cost to delete a row by its row id (DESTRUCTIVE — system will confirm).
+- Use set_work_order_customer / set_work_order_asset / set_work_order_work_type for those header fields.
+- create_work_order and update_work_order also accept customerName, workType, and asset directly.
 
 PROCEDURES:
 - A procedure is a reusable checklist template with fields (checkbox, text, number, passfail, date, signature, photo).
@@ -381,7 +524,7 @@ const TOOLS = [
   },
   {
     name: "create_work_order",
-    description: "Create a new work order. Returns the new work order with its id.",
+    description: "Create a new work order. Returns the new work order with its id. May include customer, asset, and work type at creation time.",
     input_schema: {
       type: "object",
       properties: {
@@ -390,6 +533,20 @@ const TOOLS = [
         status: { type: "string", enum: ["open", "in_progress", "complete"], description: "Defaults to 'open'" },
         priority: { type: "string", enum: ["low", "medium", "high", "urgent"], description: "Defaults to 'medium'" },
         assignee: { type: "string", description: "Person assigned. Optional." },
+        customerName: { type: "string", description: "Free-text customer name. Optional." },
+        workType: { type: "string", enum: ["", "repair", "install", "maintenance", "inspection"], description: "Optional." },
+        asset: {
+          type: "object",
+          description: "Equipment being worked on. Optional.",
+          properties: {
+            name: { type: "string" },
+            serialNumber: { type: "string" },
+            unitNumber: { type: "string" },
+            hours: { type: "number" },
+            make: { type: "string" },
+            model: { type: "string" },
+          },
+        },
       },
       required: ["title"],
     },
@@ -402,20 +559,28 @@ const TOOLS = [
         status: input.status || "open",
         priority: input.priority || "medium",
         assignee: input.assignee || "",
+        customerName: "",
+        workType: "",
+        asset: normalizeAsset({}),
+        parts: [],
+        labor: [],
+        otherCosts: [],
+        totals: { parts: 0, labor: 0, other: 0, grand: 0 },
         procedures: [],
         activity: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
+      applyWorkOrderUpdates(wo, input);
       logActivity(wo, `Work order created via AI assistant: ${wo.title}`);
       data.workorders.push(wo);
       saveData(data);
-      return { id: wo.id, title: wo.title, status: wo.status, priority: wo.priority };
+      return { id: wo.id, title: wo.title, status: wo.status, priority: wo.priority, totals: wo.totals };
     },
   },
   {
     name: "update_work_order",
-    description: "Update fields on an existing work order. Only include fields you want to change.",
+    description: "Update fields on an existing work order. Only include fields you want to change. May include customer, asset, work type.",
     input_schema: {
       type: "object",
       properties: {
@@ -425,6 +590,19 @@ const TOOLS = [
         status: { type: "string", enum: ["open", "in_progress", "complete"] },
         priority: { type: "string", enum: ["low", "medium", "high", "urgent"] },
         assignee: { type: "string" },
+        customerName: { type: "string" },
+        workType: { type: "string", enum: ["", "repair", "install", "maintenance", "inspection"] },
+        asset: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            serialNumber: { type: "string" },
+            unitNumber: { type: "string" },
+            hours: { type: "number" },
+            make: { type: "string" },
+            model: { type: "string" },
+          },
+        },
       },
       required: ["id"],
     },
@@ -434,16 +612,21 @@ const TOOLS = [
       if (!w) throw new Error("Work order not found: " + input.id);
       const changes = [];
       ["title", "description", "priority", "assignee"].forEach(k => {
-        if (input[k] !== undefined && input[k] !== w[k]) { changes.push(k); w[k] = input[k]; }
+        if (input[k] !== undefined && input[k] !== w[k]) {
+          changes.push(k);
+          w[k] = input[k];
+        }
       });
       if (input.status !== undefined && input.status !== w.status) {
         logActivity(w, `Status changed to ${input.status} via AI assistant`);
         w.status = input.status;
         changes.push("status");
       }
+      const moreChanges = applyWorkOrderUpdates(w, input);
+      moreChanges.forEach(c => { if (!changes.includes(c)) changes.push(c); });
       w.updatedAt = new Date().toISOString();
       saveData(data);
-      return { id: w.id, changed: changes };
+      return { id: w.id, changed: changes, totals: w.totals };
     },
   },
   {
@@ -614,6 +797,251 @@ const TOOLS = [
       wo.updatedAt = new Date().toISOString();
       saveData(data);
       return { instanceId, status };
+    },
+  },
+{
+    name: "set_work_order_customer",
+    description: "Set the customerName on a work order.",
+    input_schema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        customerName: { type: "string" },
+      },
+      required: ["id", "customerName"],
+    },
+    run: ({ id, customerName }) => {
+      const data = loadData();
+      const w = data.workorders.find(x => x.id === id);
+      if (!w) throw new Error("Work order not found: " + id);
+      applyWorkOrderUpdates(w, { customerName });
+      w.updatedAt = new Date().toISOString();
+      logActivity(w, `Customer set to "${customerName}" via AI assistant`);
+      saveData(data);
+      return { id, customerName: w.customerName };
+    },
+  },
+  {
+    name: "set_work_order_asset",
+    description: "Set asset fields on a work order. Provide any subset of {name, serialNumber, unitNumber, hours, make, model} — omitted fields are left unchanged.",
+    input_schema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        name: { type: "string" },
+        serialNumber: { type: "string" },
+        unitNumber: { type: "string" },
+        hours: { type: "number" },
+        make: { type: "string" },
+        model: { type: "string" },
+      },
+      required: ["id"],
+    },
+    run: (input) => {
+      const data = loadData();
+      const w = data.workorders.find(x => x.id === input.id);
+      if (!w) throw new Error("Work order not found: " + input.id);
+      const merged = { ...w.asset };
+      ["name", "serialNumber", "unitNumber", "hours", "make", "model"].forEach(k => {
+        if (input[k] !== undefined) merged[k] = input[k];
+      });
+      applyWorkOrderUpdates(w, { asset: merged });
+      w.updatedAt = new Date().toISOString();
+      logActivity(w, `Asset updated via AI assistant`);
+      saveData(data);
+      return { id: input.id, asset: w.asset };
+    },
+  },
+  {
+    name: "set_work_order_work_type",
+    description: "Set the workType on a work order.",
+    input_schema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        workType: { type: "string", enum: ["", "repair", "install", "maintenance", "inspection"] },
+      },
+      required: ["id", "workType"],
+    },
+    run: ({ id, workType }) => {
+      const data = loadData();
+      const w = data.workorders.find(x => x.id === id);
+      if (!w) throw new Error("Work order not found: " + id);
+      applyWorkOrderUpdates(w, { workType });
+      w.updatedAt = new Date().toISOString();
+      logActivity(w, `Work type set to "${workType}" via AI assistant`);
+      saveData(data);
+      return { id, workType: w.workType };
+    },
+  },
+  {
+    name: "add_part",
+    description: "Add a single part line item to a work order. Returns the new row including its id and lineTotal (CAD).",
+    input_schema: {
+      type: "object",
+      properties: {
+        workOrderId: { type: "string" },
+        partNumber: { type: "string" },
+        description: { type: "string" },
+        quantity: { type: "number" },
+        unitCost: { type: "number", description: "Cost per unit in CAD" },
+      },
+      required: ["workOrderId", "description", "quantity", "unitCost"],
+    },
+    run: (input) => {
+      const data = loadData();
+      const w = data.workorders.find(x => x.id === input.workOrderId);
+      if (!w) throw new Error("Work order not found: " + input.workOrderId);
+      const row = normalizePart({
+        partNumber: input.partNumber,
+        description: input.description,
+        quantity: input.quantity,
+        unitCost: input.unitCost,
+      });
+      w.parts.push(row);
+      w.totals = computeTotals(w);
+      w.updatedAt = new Date().toISOString();
+      logActivity(w, `Part added via AI assistant: ${row.description} (qty ${row.quantity})`);
+      saveData(data);
+      return { row, totals: w.totals };
+    },
+  },
+  {
+    name: "remove_part",
+    description: "Remove a part line item from a work order by its row id. DESTRUCTIVE — system will require user confirmation.",
+    destructive: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        workOrderId: { type: "string" },
+        partId: { type: "string" },
+      },
+      required: ["workOrderId", "partId"],
+    },
+    run: ({ workOrderId, partId }) => {
+      const data = loadData();
+      const w = data.workorders.find(x => x.id === workOrderId);
+      if (!w) throw new Error("Work order not found: " + workOrderId);
+      const idx = w.parts.findIndex(p => p.id === partId);
+      if (idx === -1) throw new Error("Part not found: " + partId);
+      const [removed] = w.parts.splice(idx, 1);
+      w.totals = computeTotals(w);
+      w.updatedAt = new Date().toISOString();
+      logActivity(w, `Part removed via AI assistant: ${removed.description}`);
+      saveData(data);
+      return { removed, totals: w.totals };
+    },
+  },
+  {
+    name: "add_labor",
+    description: "Add a single labor line item to a work order. All labor is billable. Returns the new row in CAD.",
+    input_schema: {
+      type: "object",
+      properties: {
+        workOrderId: { type: "string" },
+        technician: { type: "string" },
+        date: { type: "string", description: "ISO date string (YYYY-MM-DD)" },
+        hours: { type: "number" },
+        hourlyRate: { type: "number", description: "CAD per hour" },
+      },
+      required: ["workOrderId", "hours", "hourlyRate"],
+    },
+    run: (input) => {
+      const data = loadData();
+      const w = data.workorders.find(x => x.id === input.workOrderId);
+      if (!w) throw new Error("Work order not found: " + input.workOrderId);
+      const row = normalizeLabor({
+        technician: input.technician,
+        date: input.date,
+        hours: input.hours,
+        hourlyRate: input.hourlyRate,
+      });
+      w.labor.push(row);
+      w.totals = computeTotals(w);
+      w.updatedAt = new Date().toISOString();
+      logActivity(w, `Labor added via AI assistant: ${row.hours}h @ $${row.hourlyRate}/h`);
+      saveData(data);
+      return { row, totals: w.totals };
+    },
+  },
+  {
+    name: "remove_labor",
+    description: "Remove a labor line item from a work order by its row id. DESTRUCTIVE — system will require user confirmation.",
+    destructive: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        workOrderId: { type: "string" },
+        laborId: { type: "string" },
+      },
+      required: ["workOrderId", "laborId"],
+    },
+    run: ({ workOrderId, laborId }) => {
+      const data = loadData();
+      const w = data.workorders.find(x => x.id === workOrderId);
+      if (!w) throw new Error("Work order not found: " + workOrderId);
+      const idx = w.labor.findIndex(l => l.id === laborId);
+      if (idx === -1) throw new Error("Labor entry not found: " + laborId);
+      const [removed] = w.labor.splice(idx, 1);
+      w.totals = computeTotals(w);
+      w.updatedAt = new Date().toISOString();
+      logActivity(w, `Labor removed via AI assistant: ${removed.hours}h`);
+      saveData(data);
+      return { removed, totals: w.totals };
+    },
+  },
+  {
+    name: "add_other_cost",
+    description: "Add a single other-cost line item to a work order (travel, fees, subcontractors, etc.) in CAD.",
+    input_schema: {
+      type: "object",
+      properties: {
+        workOrderId: { type: "string" },
+        description: { type: "string" },
+        amount: { type: "number" },
+      },
+      required: ["workOrderId", "description", "amount"],
+    },
+    run: (input) => {
+      const data = loadData();
+      const w = data.workorders.find(x => x.id === input.workOrderId);
+      if (!w) throw new Error("Work order not found: " + input.workOrderId);
+      const row = normalizeOtherCost({
+        description: input.description,
+        amount: input.amount,
+      });
+      w.otherCosts.push(row);
+      w.totals = computeTotals(w);
+      w.updatedAt = new Date().toISOString();
+      logActivity(w, `Other cost added via AI assistant: ${row.description} ($${row.amount})`);
+      saveData(data);
+      return { row, totals: w.totals };
+    },
+  },
+  {
+    name: "remove_other_cost",
+    description: "Remove an other-cost line item from a work order by its row id. DESTRUCTIVE — system will require user confirmation.",
+    destructive: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        workOrderId: { type: "string" },
+        costId: { type: "string" },
+      },
+      required: ["workOrderId", "costId"],
+    },
+    run: ({ workOrderId, costId }) => {
+      const data = loadData();
+      const w = data.workorders.find(x => x.id === workOrderId);
+      if (!w) throw new Error("Work order not found: " + workOrderId);
+      const idx = w.otherCosts.findIndex(o => o.id === costId);
+      if (idx === -1) throw new Error("Other cost not found: " + costId);
+      const [removed] = w.otherCosts.splice(idx, 1);
+      w.totals = computeTotals(w);
+      w.updatedAt = new Date().toISOString();
+      logActivity(w, `Other cost removed via AI assistant: ${removed.description}`);
+      saveData(data);
+      return { removed, totals: w.totals };
     },
   },
 ];
