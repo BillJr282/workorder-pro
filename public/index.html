@@ -1523,16 +1523,20 @@ function openWoForm(wo) {
   $('#wof-priority').value = wo ? (wo.priority || 'medium') : 'medium';
   $('#wof-assignee').value = wo ? (wo.assignee || '') : '';
 
-  // Ticket 8: customer / work type / asset
-  $('#wof-customer').value = wo ? (wo.customerName || '') : '';
+  // ---- Ticket 11: customer / asset FK dropdowns ----
   $('#wof-work-type').value = wo ? (wo.workType || '') : '';
-  const a = (wo && wo.asset) || {};
-  $('#wof-asset-name').value = a.name || '';
-  $('#wof-asset-unit').value = a.unitNumber || '';
-  $('#wof-asset-serial').value = a.serialNumber || '';
-  $('#wof-asset-hours').value = a.hours == null ? '' : a.hours;
-  $('#wof-asset-make').value = a.make || '';
-  $('#wof-asset-model').value = a.model || '';
+  // Populate customer dropdown
+  populateWofCustomers(wo ? wo.customerId : '');
+  // Populate asset dropdown filtered by selected customer
+  populateWofAssets(wo ? wo.customerId : '', wo ? wo.assetId : '');
+  // Hours at service: prefer wo.hoursAtService, fall back to wo.asset.hours, else asset's currentHours, else blank
+  let initHours = '';
+  if (wo) {
+    if (wo.hoursAtService != null) initHours = wo.hoursAtService;
+    else if (wo.asset && wo.asset.hours != null && wo.asset.hours !== '') initHours = wo.asset.hours;
+  }
+  $('#wof-hours-at-service').value = initHours;
+  refreshWofAssetSummary();
 
   // Ticket 8: seed editable line-item arrays (deep clone so we don't mutate state directly)
   woFormEdit.parts = wo && Array.isArray(wo.parts) ? wo.parts.map(p => ({ ...p })) : [];
@@ -1555,24 +1559,20 @@ function openWoForm(wo) {
   $('#new-wo-btn').addEventListener('click', () => openWoForm(null));
 
   $('#wof-save').addEventListener('click', async () => {
-  const hoursStr = $('#wof-asset-hours').value;
+  const hoursStr = $('#wof-hours-at-service').value;
+  const customerId = $('#wof-customer-select').value || '';
+  const assetId = $('#wof-asset-select').value || '';
   const payload = {
     title: $('#wof-title').value.trim(),
     description: $('#wof-desc').value.trim(),
     status: $('#wof-status').value,
     priority: $('#wof-priority').value,
     assignee: $('#wof-assignee').value.trim(),
-    // Ticket 8 fields
-    customerName: $('#wof-customer').value.trim(),
+    // Ticket 11: FK references (server snapshots customerName + asset object)
+    customerId,
+    assetId,
+    hoursAtService: hoursStr === '' ? null : numOrZero(hoursStr),
     workType: $('#wof-work-type').value,
-    asset: {
-      name: $('#wof-asset-name').value.trim(),
-      unitNumber: $('#wof-asset-unit').value.trim(),
-      serialNumber: $('#wof-asset-serial').value.trim(),
-      hours: hoursStr === '' ? null : numOrZero(hoursStr),
-      make: $('#wof-asset-make').value.trim(),
-      model: $('#wof-asset-model').value.trim(),
-    },
     parts: woFormEdit.parts.map(p => ({
       id: p.id,
       partNumber: p.partNumber || '',
@@ -2544,12 +2544,150 @@ setView = function(v) {
 // Mobile menu button #3 for the users view
 $('#menu-btn-3') && $('#menu-btn-3').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
 
-// Hook into refreshAll so users list stays fresh
-const _origRefreshAll = refreshAll;
+// Hook into refreshAll so caches stay fresh
+const _origRefreshAll2 = refreshAll;
 refreshAll = async function() {
-  await _origRefreshAll();
-  if (isAdmin()) await refreshUsers();
+  await _origRefreshAll2();
+  await refreshCustomers();
+  await refreshAssets();
 };
+
+// ============================================================
+// Ticket 11 Part 4C: WO form dropdown helpers
+// ============================================================
+function populateWofCustomers(selectedId) {
+  const sel = $('#wof-customer-select');
+  if (!sel) return;
+  const opts = ['<option value="">— select customer —</option>'];
+  customersCache.forEach((c) => {
+    opts.push(`<option value="${c.id}">${escapeHtml(c.name)}</option>`);
+  });
+  sel.innerHTML = opts.join('');
+  if (selectedId) sel.value = selectedId;
+}
+
+function populateWofAssets(customerId, selectedAssetId) {
+  const sel = $('#wof-asset-select');
+  const hint = $('#wof-asset-hint');
+  if (!sel) return;
+  if (!customerId) {
+    sel.innerHTML = '<option value="">— pick a customer first —</option>';
+    sel.disabled = true;
+    if (hint) hint.textContent = 'Select a customer first to see their assets.';
+    return;
+  }
+  sel.disabled = false;
+  const filtered = assetsCache.filter((a) => a.customerId === customerId);
+  if (!filtered.length) {
+    sel.innerHTML = '<option value="">— no assets — click "+ New" to add one —</option>';
+    if (hint) hint.textContent = 'This customer has no assets. Click "+ New" to add one.';
+    return;
+  }
+  const opts = ['<option value="">— select asset —</option>'];
+  filtered.forEach((a) => {
+    const label = `${a.name}${a.unitNumber ? ' (' + a.unitNumber + ')' : ''}`;
+    opts.push(`<option value="${a.id}">${escapeHtml(label)}</option>`);
+  });
+  sel.innerHTML = opts.join('');
+  if (selectedAssetId) sel.value = selectedAssetId;
+  if (hint) hint.textContent = `${filtered.length} asset(s) for this customer.`;
+}
+
+function refreshWofAssetSummary() {
+  const summary = $('#wof-asset-summary');
+  if (!summary) return;
+  const aid = $('#wof-asset-select') ? $('#wof-asset-select').value : '';
+  const a = aid ? assetsCache.find((x) => x.id === aid) : null;
+  if (!a) {
+    summary.style.display = 'none';
+    summary.textContent = '';
+    return;
+  }
+  const bits = [];
+  if (a.make || a.model) bits.push(`${a.make || ''} ${a.model || ''}`.trim());
+  if (a.serialNumber) bits.push(`SN: ${a.serialNumber}`);
+  if (a.unitNumber) bits.push(`Unit: ${a.unitNumber}`);
+  if (a.currentHours != null) bits.push(`Current: ${a.currentHours}h`);
+  summary.textContent = bits.length ? bits.join(' • ') : 'No additional details.';
+  summary.style.display = '';
+}
+
+// Wire up customer-change → reload asset dropdown + clear hours snapshot
+document.addEventListener('change', (ev) => {
+  if (ev.target && ev.target.id === 'wof-customer-select') {
+    populateWofAssets(ev.target.value, '');
+    $('#wof-hours-at-service').value = '';
+    refreshWofAssetSummary();
+  }
+  if (ev.target && ev.target.id === 'wof-asset-select') {
+    // Auto-fill hours snapshot from the asset's currentHours when one is picked
+    const a = assetsCache.find((x) => x.id === ev.target.value);
+    if (a && a.currentHours != null && $('#wof-hours-at-service').value === '') {
+      $('#wof-hours-at-service').value = a.currentHours;
+    }
+    refreshWofAssetSummary();
+  }
+});
+
+// Inline "+ New Customer" from inside the WO form
+$('#wof-new-customer-btn') && $('#wof-new-customer-btn').addEventListener('click', () => {
+  // Stash the current WO form state, open customer modal, on save: refresh + reselect
+  const onCustomerCreated = (newCustomer) => {
+    populateWofCustomers(newCustomer.id);
+    populateWofAssets(newCustomer.id, '');
+    refreshWofAssetSummary();
+  };
+  // Override the customer save handler temporarily — simpler: use a one-shot listener
+  const origSave = $('#cf-save').onclick;
+  // We use an MutationObserver-free approach: just refresh and let user re-pick.
+  // Open the customer modal in "new" mode
+  openCustomerForm(null);
+  // Watch for the modal to close successfully
+  const modal = $('#customer-form-modal');
+  const observer = new MutationObserver(async () => {
+    if (!modal.classList.contains('show')) {
+      observer.disconnect();
+      await refreshCustomers();
+      // Find the newest customer (highest createdAt) and select it if name is unique
+      if (customersCache.length) {
+        const newest = customersCache.slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))[0];
+        if (newest) onCustomerCreated(newest);
+      }
+    }
+  });
+  observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+});
+
+// Inline "+ New Asset" from inside the WO form
+$('#wof-new-asset-btn') && $('#wof-new-asset-btn').addEventListener('click', () => {
+  const cid = $('#wof-customer-select').value;
+  if (!cid) { alert('Please select a Customer first.'); return; }
+  if (!customersCache.length) { alert('Please create a Customer first.'); return; }
+  openAssetForm(null);
+  // Pre-select the WO form's current customer in the asset modal
+  const afCustomer = $('#af-customer');
+  if (afCustomer) afCustomer.value = cid;
+  // Watch for modal close → refresh + select
+  const modal = $('#asset-form-modal');
+  const observer = new MutationObserver(async () => {
+    if (!modal.classList.contains('show')) {
+      observer.disconnect();
+      await refreshAssets();
+      // Find newest asset for this customer
+      const candidates = assetsCache
+        .filter((a) => a.customerId === cid)
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      if (candidates.length) {
+        populateWofAssets(cid, candidates[0].id);
+        if ($('#wof-hours-at-service').value === '' && candidates[0].currentHours != null) {
+          $('#wof-hours-at-service').value = candidates[0].currentHours;
+        }
+        refreshWofAssetSummary();
+      }
+    }
+  });
+  observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+});
 
 // ============================================================
 // Ticket 11: Customers & Assets
