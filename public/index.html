@@ -3324,7 +3324,7 @@ async function applyTemplateToWoForm(templateId) {
   if (!$('#wof-title').value && t.titleTemplate) $('#wof-title').value = t.titleTemplate;
   if (!$('#wof-desc').value && t.descriptionTemplate) $('#wof-desc').value = t.descriptionTemplate;
   // Type of work + priority
-  if (t.workType && $('#wof-worktype')) $('#wof-worktype').value = t.workType;
+  if (t.workType && $('#wof-work-type')) $('').value = t.workType;
   if (t.priority && $('#wof-priority')) $('#wof-priority').value = t.priority;
   // Customer + asset (if template binds them)
   if (t.customerId && $('#wof-customer-select')) {
@@ -3340,10 +3340,10 @@ async function applyTemplateToWoForm(templateId) {
     t.parts.forEach(p => addPartRow(p));
   } else if (Array.isArray(t.parts) && t.parts.length) {
     // Fallback: try to populate via the parts tbody directly if a helper isn't named addPartRow
-    const tbody = $('#wo-parts-tbody');
+    const tbody = $('#wof-parts-body');
     if (tbody) {
       // Best-effort: trigger add-part button click for each, then fill the new row
-      const addBtn = $('#wo-add-part') || $('#add-part-btn');
+      const addBtn = $('#wof-add-part');
       t.parts.forEach(p => {
         if (addBtn) addBtn.click();
         const rows = tbody.querySelectorAll('tr');
