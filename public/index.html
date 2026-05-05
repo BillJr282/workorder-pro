@@ -2911,14 +2911,6 @@ setView = function(v) {
   if (v === 'assets') { refreshAssets(); refreshCustomers(); }
 };
 
-// Hook into refreshAll so caches stay fresh
-const _origRefreshAll2 = refreshAll;
-refreshAll = async function() {
-  await _origRefreshAll2();
-  await refreshCustomers();
-  await refreshAssets();
-};
-
 // Tiny CSS for data tables (idempotent: id-scoped)
 (function injectT11Styles(){
   if (document.getElementById('t11-styles')) return;
