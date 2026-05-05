@@ -765,7 +765,7 @@ app.put("/api/templates/:id", requireAdmin, (req, res) => {
   res.json(t);
 });
 
-app.delete("/api/templates/:id", requireAdmin,, (req, res) => {
+app.delete("/api/templates/:id", requireAdmin, (req, res) => {
   const data = loadData();
   const idx = data.templates.findIndex((x) => x.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Not found" });
