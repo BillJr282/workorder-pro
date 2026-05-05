@@ -3072,8 +3072,8 @@ function renderTemplatesList() {
   }
   const isAdmin = currentUser && currentUser.role === 'admin';
   const rows = _templatesCache.map(t => {
-    const cu = t.customerId ? (_customersCache.find(c => c.id === t.customerId) || {}).name || '—' : 'Any';
-    const as = t.assetId ? (_assetsCache.find(a => a.id === t.assetId) || {}).name || '—' : 'Any';
+    const cu = t.customerId ? (customersCache.find(c => c.id === t.customerId) || {}).name || '—' : 'Any';
+    const as = t.assetId ? (assetsCache.find(a => a.id === t.assetId) || {}).name || '—' : 'Any';
     const wt = t.workType || '—';
     const partsCount = (t.parts || []).length;
     const editBtn = isAdmin ? `<button class="btn btn-secondary btn-sm" data-edit-template="${t.id}">Edit</button>` : '';
@@ -3116,7 +3116,7 @@ function populateTfCustomers(selectedId) {
   const sel = $('#tf-customer');
   if (!sel) return;
   const opts = ['<option value="">— any customer —</option>'].concat(
-    _customersCache.map(c => `<option value="${c.id}"${c.id === selectedId ? ' selected' : ''}>${escapeHtml(c.name)}</option>`)
+    customersCache.map(c => `<option value="${c.id}"${c.id === selectedId ? ' selected' : ''}>${escapeHtml(c.name)}</option>`)
   );
   sel.innerHTML = opts.join('');
 }
@@ -3124,7 +3124,7 @@ function populateTfCustomers(selectedId) {
 function populateTfAssets(customerId, selectedAssetId) {
   const sel = $('#tf-asset');
   if (!sel) return;
-  const filtered = customerId ? _assetsCache.filter(a => a.customerId === customerId) : _assetsCache.slice();
+  const filtered = customerId ? assetsCache.filter(a => a.customerId === customerId) : assetsCache.slice();
   const opts = ['<option value="">— any asset —</option>'].concat(
     filtered.map(a => `<option value="${a.id}"${a.id === selectedAssetId ? ' selected' : ''}>${escapeHtml(a.name)}${a.unitNumber ? ' (' + escapeHtml(a.unitNumber) + ')' : ''}</option>`)
   );
@@ -3297,8 +3297,8 @@ function openTemplatePicker() {
   } else {
     list.innerHTML = _templatesCache.map(t => {
       const wt = t.workType || '—';
-      const cu = t.customerId ? (_customersCache.find(c => c.id === t.customerId) || {}).name || '' : '';
-      const as = t.assetId ? (_assetsCache.find(a => a.id === t.assetId) || {}).name || '' : '';
+      const cu = t.customerId ? (customersCache.find(c => c.id === t.customerId) || {}).name || '' : '';
+      const as = t.assetId ? (assetsCache.find(a => a.id === t.assetId) || {}).name || '' : '';
       const meta = [wt, cu && 'Customer: ' + cu, as && 'Asset: ' + as].filter(Boolean).join(' • ');
       const partsCount = (t.parts || []).length;
       return `<div class="card" style="padding:12px; margin-bottom:8px; cursor:pointer;" data-pick-template="${t.id}">
