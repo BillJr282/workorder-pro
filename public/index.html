@@ -62,6 +62,17 @@
     border: 1px solid var(--border);
   }
   .btn-secondary:hover { background: var(--border); }
+  .btn-danger {
+    background: var(--danger);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .btn-danger:hover { background: #c52b2b; }
   .btn-danger { background: var(--danger); }
   .btn-danger:hover { background: #dc2626; }
   .btn-success { background: var(--success); }
@@ -647,6 +658,12 @@
   <div class="nav-item" data-view="procedures">
     <span>📝</span><span>Procedures</span>
   </div>
+  <div class="nav-item" data-view="customers">
+    <span>🏢</span><span>Customers</span>
+  </div>
+  <div class="nav-item" data-view="assets">
+    <span>🚜</span><span>Assets</span>
+  </div>
   <div class="nav-item" data-view="users" data-admin-only="1" style="display:none;">
     <span>👥</span><span>Users</span>
   </div>
@@ -693,6 +710,30 @@
         <button class="btn" id="new-user-btn">+ New User</button>
       </div>
       <div id="users-list"></div>
+    </section>
+
+    <!-- ============ Ticket 11: Customers ============ -->
+    <section id="view-customers" style="display:none;">
+      <div class="view-header">
+        <div style="display:flex; align-items:center;">
+          <button class="mobile-menu-btn" id="menu-btn-4">☰</button>
+          <h2>Customers</h2>
+        </div>
+        <button class="btn" id="new-customer-btn">+ New Customer</button>
+      </div>
+      <div id="customers-list"></div>
+    </section>
+
+    <!-- ============ Ticket 11: Assets ============ -->
+    <section id="view-assets" style="display:none;">
+      <div class="view-header">
+        <div style="display:flex; align-items:center;">
+          <button class="mobile-menu-btn" id="menu-btn-5">☰</button>
+          <h2>Assets</h2>
+        </div>
+        <button class="btn" id="new-asset-btn">+ New Asset</button>
+      </div>
+      <div id="assets-list"></div>
     </section>
   </main>
   </div>
@@ -981,6 +1022,87 @@
   </div>
 </div>
 
+<!-- ============ Ticket 11: Add / Edit Customer modal ============ -->
+<div class="modal-backdrop" id="customer-form-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="cf-title">New Customer</h3>
+      <button class="btn-icon" data-close="customer-form-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <label>Name *</label>
+        <input id="cf-name" type="text" placeholder="Customer or company name" />
+      </div>
+      <div class="field-row">
+        <label>Notes</label>
+        <textarea id="cf-notes" rows="4" placeholder="Optional notes"></textarea>
+      </div>
+      <div class="login-error" id="cf-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-danger" id="cf-delete" style="display:none;">Delete</button>
+      <div style="flex:1;"></div>
+      <button class="btn btn-secondary" data-close="customer-form-modal">Cancel</button>
+      <button class="btn" id="cf-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Ticket 11: Add / Edit Asset modal ============ -->
+<div class="modal-backdrop" id="asset-form-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="af-title">New Asset</h3>
+      <button class="btn-icon" data-close="asset-form-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <label>Customer *</label>
+        <select id="af-customer"></select>
+      </div>
+      <div class="field-row">
+        <label>Asset Name *</label>
+        <input id="af-name" type="text" placeholder="e.g. Cat 938K Loader" />
+      </div>
+      <div class="field-row" style="display:flex; gap:12px;">
+        <div style="flex:1;">
+          <label>Make</label>
+          <input id="af-make" type="text" />
+        </div>
+        <div style="flex:1;">
+          <label>Model</label>
+          <input id="af-model" type="text" />
+        </div>
+      </div>
+      <div class="field-row" style="display:flex; gap:12px;">
+        <div style="flex:1;">
+          <label>Serial Number</label>
+          <input id="af-serial" type="text" />
+        </div>
+        <div style="flex:1;">
+          <label>Unit Number</label>
+          <input id="af-unit" type="text" />
+        </div>
+      </div>
+      <div class="field-row">
+        <label>Current Hours</label>
+        <input id="af-hours" type="number" step="0.1" min="0" placeholder="Leave blank if unknown" />
+      </div>
+      <div class="field-row">
+        <label>Notes</label>
+        <textarea id="af-notes" rows="3"></textarea>
+      </div>
+      <div class="login-error" id="af-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-danger" id="af-delete" style="display:none;">Delete</button>
+      <div style="flex:1;"></div>
+      <button class="btn btn-secondary" data-close="asset-form-modal">Cancel</button>
+      <button class="btn" id="af-save">Save</button>
+    </div>
+  </div>
+</div>
 <!-- ============ LIGHTBOX ============ -->
 <div class="lightbox" id="lightbox"><img id="lightbox-img" alt="" /></div>
 
