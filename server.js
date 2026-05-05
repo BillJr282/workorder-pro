@@ -421,6 +421,170 @@ app.delete("/api/procedures/:id", (req, res) => {
   res.json({ ok: true, removed });
 });
 
+// ============================================================
+// Ticket 11: Customers
+// ============================================================
+app.get("/api/customers", (req, res) => {
+  const data = loadData();
+  res.json(data.customers);
+});
+
+app.get("/api/customers/:id", (req, res) => {
+  const data = loadData();
+  const c = data.customers.find((x) => x.id === req.params.id);
+  if (!c) return res.status(404).json({ error: "Not found" });
+  res.json(c);
+});
+
+app.post("/api/customers", (req, res) => {
+  const data = loadData();
+  const { name, notes } = req.body || {};
+  if (typeof name !== "string" || !name.trim()) {
+    return res.status(400).json({ error: "Customer name is required" });
+  }
+  const trimmedName = name.trim();
+  if (data.customers.some((x) => x.name.toLowerCase() === trimmedName.toLowerCase())) {
+    return res.status(409).json({ error: "A customer with that name already exists" });
+  }
+  const now = new Date().toISOString();
+  const c = {
+    id: uuidv4(),
+    name: trimmedName,
+    notes: typeof notes === "string" ? notes : "",
+    createdAt: now,
+    updatedAt: now,
+  };
+  data.customers.push(c);
+  saveData(data);
+  res.status(201).json(c);
+});
+
+app.put("/api/customers/:id", (req, res) => {
+  const data = loadData();
+  const c = data.customers.find((x) => x.id === req.params.id);
+  if (!c) return res.status(404).json({ error: "Not found" });
+  const { name, notes } = req.body || {};
+  if (typeof name === "string") {
+    const trimmedName = name.trim();
+    if (!trimmedName) return res.status(400).json({ error: "Customer name cannot be empty" });
+    if (data.customers.some((x) => x.id !== c.id && x.name.toLowerCase() === trimmedName.toLowerCase())) {
+      return res.status(409).json({ error: "A customer with that name already exists" });
+    }
+    c.name = trimmedName;
+  }
+  if (typeof notes === "string") c.notes = notes;
+  c.updatedAt = new Date().toISOString();
+  saveData(data);
+  res.json(c);
+});
+
+app.delete("/api/customers/:id", (req, res) => {
+  const data = loadData();
+  const idx = data.customers.findIndex((x) => x.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Not found" });
+  const cid = req.params.id;
+  const linkedAssets = data.assets.filter((a) => a.customerId === cid).length;
+  if (linkedAssets > 0) {
+    return res.status(409).json({ error: `Cannot delete: ${linkedAssets} asset(s) belong to this customer` });
+  }
+  const linkedWOs = data.workorders.filter((w) => w.customerId === cid).length;
+  if (linkedWOs > 0) {
+    return res.status(409).json({ error: `Cannot delete: ${linkedWOs} work order(s) reference this customer` });
+  }
+  const [removed] = data.customers.splice(idx, 1);
+  saveData(data);
+  res.json({ ok: true, removed });
+});
+
+// ============================================================
+// Ticket 11: Assets
+// ============================================================
+app.get("/api/assets", (req, res) => {
+  const data = loadData();
+  const { customerId } = req.query;
+  let list = data.assets;
+  if (customerId) list = list.filter((a) => a.customerId === customerId);
+  res.json(list);
+});
+
+app.get("/api/assets/:id", (req, res) => {
+  const data = loadData();
+  const a = data.assets.find((x) => x.id === req.params.id);
+  if (!a) return res.status(404).json({ error: "Not found" });
+  res.json(a);
+});
+
+app.post("/api/assets", (req, res) => {
+  const data = loadData();
+  const { customerId, name, serialNumber, unitNumber, currentHours, make, model, notes } = req.body || {};
+  if (typeof customerId !== "string" || !customerId) {
+    return res.status(400).json({ error: "customerId is required" });
+  }
+  const customer = data.customers.find((c) => c.id === customerId);
+  if (!customer) return res.status(400).json({ error: "Customer not found" });
+  if (typeof name !== "string" || !name.trim()) {
+    return res.status(400).json({ error: "Asset name is required" });
+  }
+  const now = new Date().toISOString();
+  const a = {
+    id: uuidv4(),
+    customerId,
+    name: name.trim(),
+    serialNumber: typeof serialNumber === "string" ? serialNumber.trim() : "",
+    unitNumber: typeof unitNumber === "string" ? unitNumber.trim() : "",
+    currentHours: typeof currentHours === "number" && isFinite(currentHours) ? currentHours : null,
+    make: typeof make === "string" ? make.trim() : "",
+    model: typeof model === "string" ? model.trim() : "",
+    notes: typeof notes === "string" ? notes : "",
+    createdAt: now,
+    updatedAt: now,
+  };
+  data.assets.push(a);
+  saveData(data);
+  res.status(201).json(a);
+});
+
+app.put("/api/assets/:id", (req, res) => {
+  const data = loadData();
+  const a = data.assets.find((x) => x.id === req.params.id);
+  if (!a) return res.status(404).json({ error: "Not found" });
+  const { customerId, name, serialNumber, unitNumber, currentHours, make, model, notes } = req.body || {};
+  if (typeof customerId === "string" && customerId) {
+    const customer = data.customers.find((c) => c.id === customerId);
+    if (!customer) return res.status(400).json({ error: "Customer not found" });
+    a.customerId = customerId;
+  }
+  if (typeof name === "string") {
+    if (!name.trim()) return res.status(400).json({ error: "Asset name cannot be empty" });
+    a.name = name.trim();
+  }
+  if (typeof serialNumber === "string") a.serialNumber = serialNumber.trim();
+  if (typeof unitNumber === "string") a.unitNumber = unitNumber.trim();
+  if (currentHours === null || (typeof currentHours === "number" && isFinite(currentHours))) {
+    a.currentHours = currentHours;
+  }
+  if (typeof make === "string") a.make = make.trim();
+  if (typeof model === "string") a.model = model.trim();
+  if (typeof notes === "string") a.notes = notes;
+  a.updatedAt = new Date().toISOString();
+  saveData(data);
+  res.json(a);
+});
+
+app.delete("/api/assets/:id", (req, res) => {
+  const data = loadData();
+  const idx = data.assets.findIndex((x) => x.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Not found" });
+  const aid = req.params.id;
+  const linkedWOs = data.workorders.filter((w) => w.assetId === aid).length;
+  if (linkedWOs > 0) {
+    return res.status(409).json({ error: `Cannot delete: ${linkedWOs} work order(s) reference this asset` });
+  }
+  const [removed] = data.assets.splice(idx, 1);
+  saveData(data);
+  res.json({ ok: true, removed });
+});
+
 app.post("/api/workorders/:id/procedures", (req, res) => {
   const data = loadData();
   const wo = data.workorders.find((w) => w.id === req.params.id);
