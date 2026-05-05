@@ -649,16 +649,9 @@ app.delete("/api/assets/:id", (req, res) => {
   res.json({ ok: true, removed });
 });
 // ============================================================
+// ============================================================
 // Ticket 12: Templates
 // ============================================================
-// Helper: only admins can create/update/delete templates
-function requireAdminForTemplates(req, res, next) {
-  if (!req.user || req.user.role !== "admin") {
-    return res.status(403).json({ error: "Admin role required" });
-  }
-  next();
-}
-
 app.get("/api/templates", (req, res) => {
   const data = loadData();
   res.json(data.templates);
@@ -671,7 +664,7 @@ app.get("/api/templates/:id", (req, res) => {
   res.json(t);
 });
 
-app.post("/api/templates", requireAdminForTemplates, (req, res) => {
+app.post("/api/templates", requireAdmin, (req, res) => {
   const data = loadData();
   const {
     name, description, workType, priority,
@@ -724,7 +717,7 @@ app.post("/api/templates", requireAdminForTemplates, (req, res) => {
   res.status(201).json(t);
 });
 
-app.put("/api/templates/:id", requireAdminForTemplates, (req, res) => {
+app.put("/api/templates/:id", requireAdmin, (req, res) => {
   const data = loadData();
   const t = data.templates.find((x) => x.id === req.params.id);
   if (!t) return res.status(404).json({ error: "Not found" });
@@ -772,7 +765,7 @@ app.put("/api/templates/:id", requireAdminForTemplates, (req, res) => {
   res.json(t);
 });
 
-app.delete("/api/templates/:id", requireAdminForTemplates, (req, res) => {
+app.delete("/api/templates/:id", requireAdmin,, (req, res) => {
   const data = loadData();
   const idx = data.templates.findIndex((x) => x.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Not found" });
