@@ -1115,12 +1115,12 @@
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-row">
-          <label>Name *</label>
+          <label>Template Name *</label>
           <input type="text" id="tf-name" placeholder="e.g. 250-hour service" />
         </div>
         <div class="form-row">
-          <label>Description</label>
-          <textarea id="tf-desc" rows="3" placeholder="What this template represents"></textarea>
+          <label>Internal Notes</label>
+          <textarea id="tf-desc" rows="2" placeholder="Notes about this template (not copied to WOs)"></textarea>
         </div>
         <div class="form-row" style="display:flex; gap:12px;">
           <div style="flex:1;">
@@ -1143,6 +1143,14 @@
             </select>
           </div>
         </div>
+        <div class="form-row">
+          <label>WO Title (filled into new WO)</label>
+          <input type="text" id="tf-title-template" placeholder="e.g. 250-hour scheduled service" />
+        </div>
+        <div class="form-row">
+          <label>WO Description (filled into new WO)</label>
+          <textarea id="tf-desc-template" rows="3" placeholder="Default description text for new work orders"></textarea>
+        </div>
         <div class="form-row" style="display:flex; gap:12px;">
           <div style="flex:1;">
             <label>Customer (optional)</label>
@@ -1155,12 +1163,14 @@
         </div>
         <div class="form-row">
           <label>Parts Preset</label>
-          <table class="data-table" id="tf-parts-table">
-            <thead><tr><th>Part Number</th><th>Description</th><th>Qty</th><th></th></tr></thead>
-            <tbody id="tf-parts-body"></tbody>
+          <table class="data-table">
+            <thead><tr><th>Part Number</th><th>Description</th><th>Qty</th><th>Unit Cost</th><th></th></tr></thead>
+            <tbody id="tf-parts-tbody"></tbody>
           </table>
+          <div id="tf-parts-empty" style="color:var(--muted); padding:8px; text-align:center;">No parts. Click "+ Add Part" to add.</div>
           <button type="button" class="btn btn-secondary" id="tf-add-part" style="margin-top:8px;">+ Add Part</button>
         </div>
+        <div id="tf-error" style="color:#f66; margin-top:8px;"></div>
       </div>
     </div>
     <div class="modal-footer">
