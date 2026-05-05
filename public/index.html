@@ -664,6 +664,9 @@
   <div class="nav-item" data-view="assets">
     <span>🚜</span><span>Assets</span>
   </div>
+  <div class="nav-item" data-view="templates">
+    <span>📋</span><span>Templates</span>
+  </div>
   <div class="nav-item" data-view="users" data-admin-only="1" style="display:none;">
     <span>👥</span><span>Users</span>
   </div>
@@ -734,6 +737,18 @@
         <button class="btn" id="new-asset-btn">+ New Asset</button>
       </div>
       <div id="assets-list"></div>
+    </section>
+
+    <!-- ============ Ticket 12: Templates ============ -->
+    <section id="view-templates" style="display:none;">
+      <div class="view-header">
+        <div style="display:flex; align-items:center;">
+          <button class="mobile-menu-btn" id="menu-btn-6">☰</button>
+          <h2>Templates</h2>
+        </div>
+        <button class="btn" id="new-template-btn" data-admin-only="1" style="display:none;">+ New Template</button>
+      </div>
+      <div id="templates-list"></div>
     </section>
   </main>
   </div>
@@ -1090,6 +1105,90 @@
     </div>
   </div>
 </div>
+<!-- ============ Ticket 12: Template Form Modal ============ -->
+<div class="modal-backdrop" id="template-form-modal">
+  <div class="modal" style="max-width: 760px;">
+    <div class="modal-header">
+      <h3 id="template-form-title">New Template</h3>
+      <button class="btn-icon" data-close="template-form-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Name *</label>
+          <input type="text" id="tf-name" placeholder="e.g. 250-hour service" />
+        </div>
+        <div class="form-row">
+          <label>Description</label>
+          <textarea id="tf-desc" rows="3" placeholder="What this template represents"></textarea>
+        </div>
+        <div class="form-row" style="display:flex; gap:12px;">
+          <div style="flex:1;">
+            <label>Work Type</label>
+            <select id="tf-worktype">
+              <option value="">—</option>
+              <option value="repair">Repair</option>
+              <option value="install">Install</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="inspection">Inspection</option>
+            </select>
+          </div>
+          <div style="flex:1;">
+            <label>Priority</label>
+            <select id="tf-priority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row" style="display:flex; gap:12px;">
+          <div style="flex:1;">
+            <label>Customer (optional)</label>
+            <select id="tf-customer"><option value="">—</option></select>
+          </div>
+          <div style="flex:1;">
+            <label>Asset (optional)</label>
+            <select id="tf-asset"><option value="">—</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Parts Preset</label>
+          <table class="data-table" id="tf-parts-table">
+            <thead><tr><th>Part Number</th><th>Description</th><th>Qty</th><th></th></tr></thead>
+            <tbody id="tf-parts-body"></tbody>
+          </table>
+          <button type="button" class="btn btn-secondary" id="tf-add-part" style="margin-top:8px;">+ Add Part</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-danger" id="tf-delete" style="display:none;">Delete</button>
+      <div style="flex:1;"></div>
+      <button class="btn btn-secondary" data-close="template-form-modal">Cancel</button>
+      <button class="btn" id="tf-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Ticket 12: Template Picker Modal ============ -->
+<div class="modal-backdrop" id="template-picker-modal">
+  <div class="modal" style="max-width: 640px;">
+    <div class="modal-header">
+      <h3>Pick a Template</h3>
+      <button class="btn-icon" data-close="template-picker-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="template-picker-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+    <div class="modal-footer">
+      <div style="flex:1;"></div>
+      <button class="btn btn-secondary" data-close="template-picker-modal">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ LIGHTBOX ============ -->
 <div class="lightbox" id="lightbox"><img id="lightbox-img" alt="" /></div>
 
