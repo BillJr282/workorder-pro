@@ -2936,6 +2936,378 @@ setView = function(v) {
   `;
   document.head.appendChild(s);
 })();
+})();
+
+// ============================================================
+// Ticket 12: Templates — state, list rendering, form CRUD
+// ============================================================
+let _templatesCache = [];
+let editingTemplateId = null;
+
+async function refreshTemplates() {
+  try {
+    const res = await apiFetch('/api/templates');
+    _templatesCache = Array.isArray(res) ? res : [];
+  } catch (e) { _templatesCache = []; }
+  renderTemplatesList();
+}
+
+function renderTemplatesList() {
+  const container = $('#templates-list');
+  if (!container) return;
+  if (!_templatesCache.length) {
+    container.innerHTML = '<div style="color:var(--muted); padding:24px; text-align:center;">No templates yet. ' +
+      (currentUser && currentUser.role === 'admin' ? 'Click "+ New Template" to create one.' : 'An admin can create templates.') +
+      '</div>';
+    return;
+  }
+  const isAdmin = currentUser && currentUser.role === 'admin';
+  const rows = _templatesCache.map(t => {
+    const cu = t.customerId ? (_customersCache.find(c => c.id === t.customerId) || {}).name || '—' : 'Any';
+    const as = t.assetId ? (_assetsCache.find(a => a.id === t.assetId) || {}).name || '—' : 'Any';
+    const wt = t.workType || '—';
+    const partsCount = (t.parts || []).length;
+    const editBtn = isAdmin ? `<button class="btn btn-secondary btn-sm" data-edit-template="${t.id}">Edit</button>` : '';
+    return `<tr>
+      <td><strong>${escapeHtml(t.name)}</strong>${t.description ? '<div style="color:var(--muted); font-size:12px;">' + escapeHtml(t.description) + '</div>' : ''}</td>
+      <td>${escapeHtml(wt)}</td>
+      <td>${escapeHtml(t.priority || 'medium')}</td>
+      <td>${escapeHtml(cu)}</td>
+      <td>${escapeHtml(as)}</td>
+      <td>${partsCount}</td>
+      <td style="text-align:right">${editBtn}</td>
+    </tr>`;
+  }).join('');
+  container.innerHTML = `<table class="data-table">
+    <thead><tr><th>NAME</th><th>WORK TYPE</th><th>PRIORITY</th><th>CUSTOMER</th><th>ASSET</th><th>PARTS</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Open template form (for create or edit)
+function openTemplateForm(templateId) {
+  editingTemplateId = templateId || null;
+  const t = templateId ? _templatesCache.find(x => x.id === templateId) : null;
+  $('#template-form-title').textContent = t ? 'Edit Template' : 'New Template';
+  $('#tf-name').value = t ? t.name : '';
+  $('#tf-desc').value = t ? (t.description || '') : '';
+  $('#tf-worktype').value = t ? (t.workType || '') : '';
+  $('#tf-priority').value = t ? (t.priority || 'medium') : 'medium';
+  $('#tf-title-template').value = t ? (t.titleTemplate || '') : '';
+  $('#tf-desc-template').value = t ? (t.descriptionTemplate || '') : '';
+  $('#tf-error').textContent = '';
+  $('#tf-delete').style.display = t ? '' : 'none';
+  populateTfCustomers(t ? t.customerId : '');
+  populateTfAssets(t ? t.customerId : '', t ? t.assetId : '');
+  renderTfParts(t ? (t.parts || []) : []);
+  $('#template-form-modal').classList.add('show');
+}
+
+function populateTfCustomers(selectedId) {
+  const sel = $('#tf-customer');
+  if (!sel) return;
+  const opts = ['<option value="">— any customer —</option>'].concat(
+    _customersCache.map(c => `<option value="${c.id}"${c.id === selectedId ? ' selected' : ''}>${escapeHtml(c.name)}</option>`)
+  );
+  sel.innerHTML = opts.join('');
+}
+
+function populateTfAssets(customerId, selectedAssetId) {
+  const sel = $('#tf-asset');
+  if (!sel) return;
+  const filtered = customerId ? _assetsCache.filter(a => a.customerId === customerId) : _assetsCache.slice();
+  const opts = ['<option value="">— any asset —</option>'].concat(
+    filtered.map(a => `<option value="${a.id}"${a.id === selectedAssetId ? ' selected' : ''}>${escapeHtml(a.name)}${a.unitNumber ? ' (' + escapeHtml(a.unitNumber) + ')' : ''}</option>`)
+  );
+  sel.innerHTML = opts.join('');
+}
+
+let _tfPartsLocal = [];
+function renderTfParts(parts) {
+  _tfPartsLocal = (parts || []).map(p => Object.assign({}, p));
+  const tbody = $('#tf-parts-tbody');
+  const empty = $('#tf-parts-empty');
+  if (!tbody) return;
+  if (!_tfPartsLocal.length) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  tbody.innerHTML = _tfPartsLocal.map((p, i) => `<tr>
+    <td><input type="text" data-tfp-i="${i}" data-tfp-f="partNumber" value="${escapeHtml(p.partNumber || '')}" /></td>
+    <td><input type="text" data-tfp-i="${i}" data-tfp-f="description" value="${escapeHtml(p.description || '')}" /></td>
+    <td><input type="number" step="any" data-tfp-i="${i}" data-tfp-f="quantity" value="${p.quantity != null ? p.quantity : 1}" /></td>
+    <td><input type="number" step="any" data-tfp-i="${i}" data-tfp-f="unitCost" value="${p.unitCost != null ? p.unitCost : 0}" /></td>
+    <td><button class="btn-icon" data-tfp-del="${i}" title="Remove">✕</button></td>
+  </tr>`).join('');
+}
+// --- Template form: parts table interactions ---
+$('#tf-add-part') && $('#tf-add-part').addEventListener('click', () => {
+  _tfPartsLocal.push({ partNumber: '', description: '', quantity: 1, unitCost: 0 });
+  renderTfParts(_tfPartsLocal);
+});
+
+$('#tf-parts-tbody') && $('#tf-parts-tbody').addEventListener('input', (ev) => {
+  const i = ev.target.getAttribute('data-tfp-i');
+  const f = ev.target.getAttribute('data-tfp-f');
+  if (i == null || !f) return;
+  const idx = parseInt(i, 10);
+  if (!_tfPartsLocal[idx]) return;
+  let v = ev.target.value;
+  if (f === 'quantity' || f === 'unitCost') {
+    v = parseFloat(v);
+    if (!isFinite(v)) v = 0;
+  }
+  _tfPartsLocal[idx][f] = v;
+});
+
+$('#tf-parts-tbody') && $('#tf-parts-tbody').addEventListener('click', (ev) => {
+  const delIdx = ev.target.getAttribute('data-tfp-del');
+  if (delIdx == null) return;
+  _tfPartsLocal.splice(parseInt(delIdx, 10), 1);
+  renderTfParts(_tfPartsLocal);
+});
+
+// --- Template form: customer change re-filters assets ---
+$('#tf-customer') && $('#tf-customer').addEventListener('change', () => {
+  populateTfAssets($('#tf-customer').value, '');
+});
+
+// --- Template form: save (create or update) ---
+$('#tf-save') && $('#tf-save').addEventListener('click', async () => {
+  const payload = {
+    name: $('#tf-name').value.trim(),
+    description: $('#tf-desc').value,
+    workType: $('#tf-worktype').value,
+    priority: $('#tf-priority').value,
+    customerId: $('#tf-customer').value || null,
+    assetId: $('#tf-asset').value || null,
+    titleTemplate: $('#tf-title-template').value,
+    descriptionTemplate: $('#tf-desc-template').value,
+    parts: _tfPartsLocal.map(p => ({
+      partNumber: p.partNumber || '',
+      description: p.description || '',
+      quantity: typeof p.quantity === 'number' && isFinite(p.quantity) ? p.quantity : 1,
+      unitCost: typeof p.unitCost === 'number' && isFinite(p.unitCost) ? p.unitCost : 0,
+    })),
+  };
+  if (!payload.name) { $('#tf-error').textContent = 'Name is required'; return; }
+  try {
+    if (editingTemplateId) {
+      await apiFetch('/api/templates/' + editingTemplateId, {
+        method: 'PUT', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload),
+      });
+    } else {
+      await apiFetch('/api/templates', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload),
+      });
+    }
+    $('#template-form-modal').classList.remove('show');
+    await refreshTemplates();
+  } catch (e) {
+    $('#tf-error').textContent = e.message || 'Save failed';
+  }
+});
+
+// --- Template form: delete ---
+$('#tf-delete') && $('#tf-delete').addEventListener('click', async () => {
+  if (!editingTemplateId) return;
+  if (!confirm('Delete this template? This cannot be undone.')) return;
+  try {
+    await apiFetch('/api/templates/' + editingTemplateId, { method: 'DELETE' });
+    $('#template-form-modal').classList.remove('show');
+    await refreshTemplates();
+  } catch (e) {
+    $('#tf-error').textContent = e.message || 'Delete failed';
+  }
+});
+
+// --- "+ New Template" button ---
+$('#new-template-btn') && $('#new-template-btn').addEventListener('click', () => openTemplateForm(null));
+
+// --- Mobile menu button on Templates view ---
+$('#menu-btn-6') && $('#menu-btn-6').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+
+// --- Edit-template click (delegated on templates-list) ---
+$('#templates-list') && $('#templates-list').addEventListener('click', (ev) => {
+  const id = ev.target.getAttribute && ev.target.getAttribute('data-edit-template');
+  if (!id) return;
+  openTemplateForm(id);
+});
+
+// --- Hook into setView to load templates and toggle visibility ---
+const _origSetView3 = setView;
+setView = function(v) {
+  _origSetView3(v);
+  $('#view-templates') && ($('#view-templates').style.display = v === 'templates' ? '' : 'none');
+  if (v === 'templates') refreshTemplates();
+};
+
+// --- Hook into refreshAll to keep templates fresh ---
+const _origRefreshAll3 = refreshAll;
+refreshAll = async function() {
+  await _origRefreshAll3();
+  await refreshTemplates();
+};
+
+// --- Show admin-only template buttons when admin ---
+function applyTemplateAdminVisibility() {
+  const isAdmin = currentUser && currentUser.role === 'admin';
+  document.querySelectorAll('[data-admin-only]').forEach(el => {
+    if (el.id === 'new-template-btn') {
+      el.style.display = isAdmin ? '' : 'none';
+    }
+  });
+}
+// Re-apply on auth changes — bootAuth runs synchronously below, then refreshAll
+const _origApplyRoleVis = (typeof applyRoleVisibility === 'function') ? applyRoleVisibility : null;
+if (_origApplyRoleVis) {
+  applyRoleVisibility = function() {
+    _origApplyRoleVis.apply(this, arguments);
+    applyTemplateAdminVisibility();
+  };
+} else {
+  // Fallback: call once after bootAuth completes, on a short delay
+  setTimeout(applyTemplateAdminVisibility, 500);
+}
+// ============================================================
+// Ticket 12: Template picker — "Create from Template" on WO form
+// ============================================================
+
+// Open the template picker modal
+function openTemplatePicker() {
+  const list = $('#template-picker-list');
+  if (!list) return;
+  if (!_templatesCache.length) {
+    list.innerHTML = '<div style="color:var(--muted); padding:24px; text-align:center;">No templates available. ' +
+      (currentUser && currentUser.role === 'admin' ? 'Go to Templates → "+ New Template" to create one.' : 'An admin can create templates.') +
+      '</div>';
+  } else {
+    list.innerHTML = _templatesCache.map(t => {
+      const wt = t.workType || '—';
+      const cu = t.customerId ? (_customersCache.find(c => c.id === t.customerId) || {}).name || '' : '';
+      const as = t.assetId ? (_assetsCache.find(a => a.id === t.assetId) || {}).name || '' : '';
+      const meta = [wt, cu && 'Customer: ' + cu, as && 'Asset: ' + as].filter(Boolean).join(' • ');
+      const partsCount = (t.parts || []).length;
+      return `<div class="card" style="padding:12px; margin-bottom:8px; cursor:pointer;" data-pick-template="${t.id}">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong>${escapeHtml(t.name)}</strong>
+            ${t.description ? '<div style="color:var(--muted); font-size:12px; margin-top:2px;">' + escapeHtml(t.description) + '</div>' : ''}
+            <div style="color:var(--muted); font-size:12px; margin-top:4px;">${escapeHtml(meta)}${partsCount ? ' • ' + partsCount + ' part(s)' : ''}</div>
+          </div>
+          <button class="btn btn-sm" data-pick-template="${t.id}">Use</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  $('#template-picker-modal').classList.add('show');
+}
+
+// Apply a template into the open WO form
+async function applyTemplateToWoForm(templateId) {
+  const t = _templatesCache.find(x => x.id === templateId);
+  if (!t) return;
+  // Pre-fill title/description (only if blank, so user-typed content isn't clobbered)
+  if (!$('#wof-title').value && t.titleTemplate) $('#wof-title').value = t.titleTemplate;
+  if (!$('#wof-desc').value && t.descriptionTemplate) $('#wof-desc').value = t.descriptionTemplate;
+  // Type of work + priority
+  if (t.workType && $('#wof-worktype')) $('#wof-worktype').value = t.workType;
+  if (t.priority && $('#wof-priority')) $('#wof-priority').value = t.priority;
+  // Customer + asset (if template binds them)
+  if (t.customerId && $('#wof-customer-select')) {
+    $('#wof-customer-select').value = t.customerId;
+    if (typeof populateWofAssets === 'function') populateWofAssets(t.customerId, t.assetId || '');
+    if (t.assetId && $('#wof-asset-select')) {
+      $('#wof-asset-select').value = t.assetId;
+      if (typeof refreshWofAssetSummary === 'function') refreshWofAssetSummary();
+    }
+  }
+  // Parts: append template parts to existing parts list
+  if (Array.isArray(t.parts) && t.parts.length && typeof addPartRow === 'function') {
+    t.parts.forEach(p => addPartRow(p));
+  } else if (Array.isArray(t.parts) && t.parts.length) {
+    // Fallback: try to populate via the parts tbody directly if a helper isn't named addPartRow
+    const tbody = $('#wo-parts-tbody');
+    if (tbody) {
+      // Best-effort: trigger add-part button click for each, then fill the new row
+      const addBtn = $('#wo-add-part') || $('#add-part-btn');
+      t.parts.forEach(p => {
+        if (addBtn) addBtn.click();
+        const rows = tbody.querySelectorAll('tr');
+        const lastRow = rows[rows.length - 1];
+        if (!lastRow) return;
+        const inputs = lastRow.querySelectorAll('input');
+        if (inputs[0]) { inputs[0].value = p.partNumber || ''; inputs[0].dispatchEvent(new Event('input', {bubbles:true})); }
+        if (inputs[1]) { inputs[1].value = p.description || ''; inputs[1].dispatchEvent(new Event('input', {bubbles:true})); }
+        if (inputs[2]) { inputs[2].value = p.quantity != null ? p.quantity : 1; inputs[2].dispatchEvent(new Event('input', {bubbles:true})); }
+        if (inputs[3]) { inputs[3].value = p.unitCost != null ? p.unitCost : 0; inputs[3].dispatchEvent(new Event('input', {bubbles:true})); }
+      });
+    }
+  }
+  $('#template-picker-modal').classList.remove('show');
+}
+
+// Click delegation in picker
+$('#template-picker-list') && $('#template-picker-list').addEventListener('click', (ev) => {
+  const id = ev.target.getAttribute && ev.target.getAttribute('data-pick-template');
+  if (!id) {
+    // Also allow clicking the card itself (parent of the button)
+    const card = ev.target.closest && ev.target.closest('[data-pick-template]');
+    if (card) {
+      const cid = card.getAttribute('data-pick-template');
+      if (cid) applyTemplateToWoForm(cid);
+    }
+    return;
+  }
+  applyTemplateToWoForm(id);
+});
+
+// "Create from Template" button on the WO list page header
+function injectCreateFromTemplateBtn() {
+  const woHeader = document.querySelector('#view-workorders .view-header');
+  if (!woHeader) return;
+  if (woHeader.querySelector('#cft-btn')) return; // idempotent
+  const btn = document.createElement('button');
+  btn.id = 'cft-btn';
+  btn.className = 'btn btn-secondary';
+  btn.style.marginRight = '8px';
+  btn.textContent = '⚡ From Template';
+  btn.addEventListener('click', async () => {
+    // Open new WO form first, then layer the picker on top so applyTemplateToWoForm has a target
+    if (typeof openWoForm === 'function') {
+      openWoForm(null);
+    } else {
+      const newBtn = document.querySelector('#view-workorders .view-header .btn:not(.btn-secondary)');
+      if (newBtn) newBtn.click();
+    }
+    // Small delay so the WO modal is fully rendered before picker opens
+    setTimeout(openTemplatePicker, 100);
+  });
+  // Insert before the "+ New Work Order" button
+  const newWoBtn = woHeader.querySelector('button.btn:not(.btn-secondary):not(.mobile-menu-btn)');
+  if (newWoBtn && newWoBtn.parentNode) {
+    newWoBtn.parentNode.insertBefore(btn, newWoBtn);
+  } else {
+    woHeader.appendChild(btn);
+  }
+}
+// Inject once after DOM is ready
+setTimeout(injectCreateFromTemplateBtn, 100);
+
+// Also inject on view switch in case templates are loaded after first render
+const _origSetView4 = setView;
+setView = function(v) {
+  _origSetView4(v);
+  if (v === 'workorders') injectCreateFromTemplateBtn();
+};
 
 // ===== Boot (Ticket 10) =====
 bootAuth();
