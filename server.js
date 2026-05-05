@@ -64,6 +64,8 @@ console.log(`[startup] DATA_FILE = ${DATA_FILE}`);
   // ---- Ticket 11: customers + assets ----
   if (!Array.isArray(data.customers)) data.customers = [];
   if (!Array.isArray(data.assets)) data.assets = [];
+  // ---- Ticket 12: templates ----
+  if (!Array.isArray(data.templates)) data.templates = [];
   // One-shot wipe of legacy work orders (Q4=C: start fresh on T11 schema)
   if (!data.t11Migrated) {
     data.workorders = [];
@@ -646,7 +648,140 @@ app.delete("/api/assets/:id", (req, res) => {
   saveData(data);
   res.json({ ok: true, removed });
 });
+// ============================================================
+// Ticket 12: Templates
+// ============================================================
+// Helper: only admins can create/update/delete templates
+function requireAdminForTemplates(req, res, next) {
+  if (!req.user || req.user.role !== "admin") {
+    return res.status(403).json({ error: "Admin role required" });
+  }
+  next();
+}
 
+app.get("/api/templates", (req, res) => {
+  const data = loadData();
+  res.json(data.templates);
+});
+
+app.get("/api/templates/:id", (req, res) => {
+  const data = loadData();
+  const t = data.templates.find((x) => x.id === req.params.id);
+  if (!t) return res.status(404).json({ error: "Not found" });
+  res.json(t);
+});
+
+app.post("/api/templates", requireAdminForTemplates, (req, res) => {
+  const data = loadData();
+  const {
+    name, description, workType, priority,
+    customerId, assetId,
+    titleTemplate, descriptionTemplate,
+    parts,
+  } = req.body || {};
+  if (!name || typeof name !== "string" || !name.trim()) {
+    return res.status(400).json({ error: "name is required" });
+  }
+  // Optional FK validation
+  if (customerId) {
+    const cu = data.customers.find((c) => c.id === customerId);
+    if (!cu) return res.status(400).json({ error: "Unknown customerId" });
+  }
+  if (assetId) {
+    const as = data.assets.find((a) => a.id === assetId);
+    if (!as) return res.status(400).json({ error: "Unknown assetId" });
+    if (customerId && as.customerId !== customerId) {
+      return res.status(400).json({ error: "Asset does not belong to specified customer" });
+    }
+  }
+  const allowedWorkTypes = ["", "repair", "install", "maintenance", "inspection"];
+  const wt = allowedWorkTypes.includes(workType) ? workType : "";
+  const allowedPriorities = ["low", "medium", "high"];
+  const pr = allowedPriorities.includes(priority) ? priority : "medium";
+  const cleanParts = Array.isArray(parts) ? parts.map((p) => ({
+    partNumber: typeof p.partNumber === "string" ? p.partNumber : "",
+    description: typeof p.description === "string" ? p.description : "",
+    quantity: typeof p.quantity === "number" && isFinite(p.quantity) ? p.quantity : 1,
+    unitCost: typeof p.unitCost === "number" && isFinite(p.unitCost) ? p.unitCost : 0,
+  })) : [];
+  const now = new Date().toISOString();
+  const t = {
+    id: uuidv4(),
+    name: name.trim(),
+    description: typeof description === "string" ? description : "",
+    workType: wt,
+    priority: pr,
+    customerId: typeof customerId === "string" && customerId ? customerId : null,
+    assetId: typeof assetId === "string" && assetId ? assetId : null,
+    titleTemplate: typeof titleTemplate === "string" ? titleTemplate : "",
+    descriptionTemplate: typeof descriptionTemplate === "string" ? descriptionTemplate : "",
+    parts: cleanParts,
+    createdAt: now,
+    updatedAt: now,
+  };
+  data.templates.push(t);
+  saveData(data);
+  res.status(201).json(t);
+});
+
+app.put("/api/templates/:id", requireAdminForTemplates, (req, res) => {
+  const data = loadData();
+  const t = data.templates.find((x) => x.id === req.params.id);
+  if (!t) return res.status(404).json({ error: "Not found" });
+  const {
+    name, description, workType, priority,
+    customerId, assetId,
+    titleTemplate, descriptionTemplate,
+    parts,
+  } = req.body || {};
+  if (typeof name === "string" && name.trim()) t.name = name.trim();
+  if (typeof description === "string") t.description = description;
+  const allowedWorkTypes = ["", "repair", "install", "maintenance", "inspection"];
+  if (allowedWorkTypes.includes(workType)) t.workType = workType;
+  const allowedPriorities = ["low", "medium", "high"];
+  if (allowedPriorities.includes(priority)) t.priority = priority;
+  if (customerId === null || customerId === "") {
+    t.customerId = null;
+  } else if (typeof customerId === "string") {
+    const cu = data.customers.find((c) => c.id === customerId);
+    if (!cu) return res.status(400).json({ error: "Unknown customerId" });
+    t.customerId = customerId;
+  }
+  if (assetId === null || assetId === "") {
+    t.assetId = null;
+  } else if (typeof assetId === "string") {
+    const as = data.assets.find((a) => a.id === assetId);
+    if (!as) return res.status(400).json({ error: "Unknown assetId" });
+    if (t.customerId && as.customerId !== t.customerId) {
+      return res.status(400).json({ error: "Asset does not belong to template's customer" });
+    }
+    t.assetId = assetId;
+  }
+  if (typeof titleTemplate === "string") t.titleTemplate = titleTemplate;
+  if (typeof descriptionTemplate === "string") t.descriptionTemplate = descriptionTemplate;
+  if (Array.isArray(parts)) {
+    t.parts = parts.map((p) => ({
+      partNumber: typeof p.partNumber === "string" ? p.partNumber : "",
+      description: typeof p.description === "string" ? p.description : "",
+      quantity: typeof p.quantity === "number" && isFinite(p.quantity) ? p.quantity : 1,
+      unitCost: typeof p.unitCost === "number" && isFinite(p.unitCost) ? p.unitCost : 0,
+    }));
+  }
+  t.updatedAt = new Date().toISOString();
+  saveData(data);
+  res.json(t);
+});
+
+app.delete("/api/templates/:id", requireAdminForTemplates, (req, res) => {
+  const data = loadData();
+  const idx = data.templates.findIndex((x) => x.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Not found" });
+  const [removed] = data.templates.splice(idx, 1);
+  saveData(data);
+  res.json({ ok: true, removed });
+});
+
+app.post("/api/workorders/:id/procedures", (req, res) => {
 app.post("/api/workorders/:id/procedures", (req, res) => {
   const data = loadData();
   const wo = data.workorders.find((w) => w.id === req.params.id);
