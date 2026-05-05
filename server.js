@@ -61,6 +61,15 @@ console.log(`[startup] DATA_FILE = ${DATA_FILE}`);
   // Prune expired sessions on every load
   const now = Date.now();
   data.sessions = data.sessions.filter(s => !s.expiresAt || s.expiresAt > now);
+  // ---- Ticket 11: customers + assets ----
+  if (!Array.isArray(data.customers)) data.customers = [];
+  if (!Array.isArray(data.assets)) data.assets = [];
+  // One-shot wipe of legacy work orders (Q4=C: start fresh on T11 schema)
+  if (!data.t11Migrated) {
+    data.workorders = [];
+    data.t11Migrated = true;
+    console.log("[startup] T11 migration: wiped legacy work orders, starting fresh on customer/asset entities");
+  }
     data.workorders.forEach((w) => {
     if (!Array.isArray(w.procedures)) w.procedures = [];
     if (!Array.isArray(w.activity)) w.activity = [];
