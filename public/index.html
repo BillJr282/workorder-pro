@@ -932,7 +932,19 @@
 
 <!-- ============ MODAL: ATTACH PROCEDURE PICKER ============ -->
 <div class="modal-backdrop" id="attach-modal">
-  <!-- ============ Ticket 10: Add / Edit User modal ============ -->
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Attach Procedure</h3>
+      <button class="btn-icon" data-close="attach-modal">✕</button>
+    </div>
+    <div class="modal-body" id="attach-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close="attach-modal">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Ticket 10: Add / Edit User modal ============ -->
 <div class="modal-backdrop" id="user-form-modal">
   <div class="modal">
     <div class="modal-header">
@@ -965,17 +977,6 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" data-close="user-form-modal">Cancel</button>
       <button class="btn" id="uf-save">Save</button>
-    </div>
-  </div>
-</div>
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Attach Procedure</h3>
-      <button class="btn-icon" data-close="attach-modal">✕</button>
-    </div>
-    <div class="modal-body" id="attach-body"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" data-close="attach-modal">Cancel</button>
     </div>
   </div>
 </div>
