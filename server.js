@@ -782,7 +782,6 @@ app.delete("/api/templates/:id", requireAdminForTemplates, (req, res) => {
 });
 
 app.post("/api/workorders/:id/procedures", (req, res) => {
-app.post("/api/workorders/:id/procedures", (req, res) => {
   const data = loadData();
   const wo = data.workorders.find((w) => w.id === req.params.id);
   if (!wo) return res.status(404).json({ error: "Work order not found" });
