@@ -3324,7 +3324,7 @@ async function applyTemplateToWoForm(templateId) {
   if (!$('#wof-title').value && t.titleTemplate) $('#wof-title').value = t.titleTemplate;
   if (!$('#wof-desc').value && t.descriptionTemplate) $('#wof-desc').value = t.descriptionTemplate;
   // Type of work + priority
-  if (t.workType && $('#wof-work-type')) $('').value = t.workType;
+  if (t.workType && $('#wof-work-type')) $('#wof-work-type').value = t.workType;
   if (t.priority && $('#wof-priority')) $('#wof-priority').value = t.priority;
   // Customer + asset (if template binds them)
   if (t.customerId && $('#wof-customer-select')) {
