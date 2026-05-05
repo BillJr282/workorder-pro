@@ -176,7 +176,59 @@ function computeTotals(wo) {
 function applyWorkOrderUpdates(wo, body) {
   // Mutates wo with any provided new-schema fields. Returns array of changed keys.
   const changed = [];
-  if (body.customerName !== undefined && body.customerName !== wo.customerName) {
+  // ---- Ticket 11: customerId / assetId FK support (with name snapshot) ----
+  // Load fresh data once for FK lookups (only if needed).
+  let _t11Data = null;
+  const _t11 = () => (_t11Data = _t11Data || loadData());
+  if (body.customerId !== undefined) {
+    if (body.customerId === null || body.customerId === "") {
+      if (wo.customerId !== "" && wo.customerId !== undefined) {
+        wo.customerId = "";
+        wo.customerName = "";
+        changed.push("customer");
+      }
+    } else {
+      const c = _t11().customers.find((x) => x.id === body.customerId);
+      if (c && c.id !== wo.customerId) {
+        wo.customerId = c.id;
+        wo.customerName = c.name;
+        changed.push("customer");
+      }
+    }
+  }
+  if (body.assetId !== undefined) {
+    if (body.assetId === null || body.assetId === "") {
+      if (wo.assetId !== "" && wo.assetId !== undefined) {
+        wo.assetId = "";
+        wo.asset = normalizeAsset({});
+        changed.push("asset");
+      }
+    } else {
+      const a = _t11().assets.find((x) => x.id === body.assetId);
+      if (a && a.id !== wo.assetId) {
+        wo.assetId = a.id;
+        wo.asset = normalizeAsset({
+          name: a.name,
+          serialNumber: a.serialNumber,
+          unitNumber: a.unitNumber,
+          make: a.make,
+          model: a.model,
+          hours: typeof body.hoursAtService === "number" ? body.hoursAtService : a.currentHours,
+        });
+        // If an explicit hoursAtService was sent, also store on the WO for clarity
+        if (typeof body.hoursAtService === "number") wo.hoursAtService = body.hoursAtService;
+        changed.push("asset");
+      }
+    }
+  } else if (typeof body.hoursAtService === "number" && wo.assetId) {
+    // Update only the hours snapshot, asset unchanged
+    wo.asset = wo.asset || normalizeAsset({});
+    wo.asset.hours = body.hoursAtService;
+    wo.hoursAtService = body.hoursAtService;
+    changed.push("asset");
+  }
+  if (body.customerName !== undefined && body.customerName !== wo.customerName && body.customerId === undefined) {
+    // Legacy/free-text path (only when no customerId provided)
     wo.customerName = String(body.customerName || "");
     changed.push("customerName");
   }
@@ -184,7 +236,8 @@ function applyWorkOrderUpdates(wo, body) {
     const wt = ALLOWED_WORK_TYPES.includes(body.workType) ? body.workType : "";
     if (wt !== wo.workType) { wo.workType = wt; changed.push("workType"); }
   }
-  if (body.asset !== undefined && body.asset && typeof body.asset === "object") {
+  if (body.asset !== undefined && body.asset && typeof body.asset === "object" && body.assetId === undefined) {
+    // Legacy free-form asset object (only when no assetId provided)
     wo.asset = normalizeAsset(body.asset);
     changed.push("asset");
   }
