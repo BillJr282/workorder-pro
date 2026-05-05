@@ -2564,6 +2564,262 @@ refreshAll = async function() {
   if (isAdmin()) await refreshUsers();
 };
 
+// ============================================================
+// Ticket 11: Customers & Assets
+// ============================================================
+let customersCache = [];
+let assetsCache = [];
+
+async function refreshCustomers() {
+  try {
+    customersCache = await apiFetch('/api/customers');
+  } catch (e) {
+    customersCache = [];
+    console.error('refreshCustomers', e);
+  }
+  renderCustomers();
+}
+
+async function refreshAssets() {
+  try {
+    assetsCache = await apiFetch('/api/assets');
+  } catch (e) {
+    assetsCache = [];
+    console.error('refreshAssets', e);
+  }
+  renderAssets();
+}
+
+function renderCustomers() {
+  const root = $('#customers-list');
+  if (!root) return;
+  if (!customersCache.length) {
+    root.innerHTML = '<div style="padding:24px; color:var(--muted); text-align:center;">No customers yet. Click "+ New Customer" to add one.</div>';
+    return;
+  }
+  const rows = customersCache.map((c) => {
+    const assetCount = assetsCache.filter((a) => a.customerId === c.id).length;
+    return `
+      <tr>
+        <td><strong>${escapeHtml(c.name)}</strong></td>
+        <td>${assetCount}</td>
+        <td style="color:var(--muted); font-size:13px;">${escapeHtml((c.notes || '').slice(0, 80))}${(c.notes || '').length > 80 ? '…' : ''}</td>
+        <td><button class="btn btn-secondary btn-sm" data-edit-customer="${c.id}">Edit</button></td>
+      </tr>`;
+  }).join('');
+  root.innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Name</th><th>Assets</th><th>Notes</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  root.querySelectorAll('[data-edit-customer]').forEach((b) => {
+    b.addEventListener('click', () => openCustomerForm(b.dataset.editCustomer));
+  });
+}
+
+function renderAssets() {
+  const root = $('#assets-list');
+  if (!root) return;
+  if (!assetsCache.length) {
+    root.innerHTML = '<div style="padding:24px; color:var(--muted); text-align:center;">No assets yet. Click "+ New Asset" to add one.</div>';
+    return;
+  }
+  const rows = assetsCache.map((a) => {
+    const cust = customersCache.find((c) => c.id === a.customerId);
+    return `
+      <tr>
+        <td><strong>${escapeHtml(a.name)}</strong></td>
+        <td>${escapeHtml(cust ? cust.name : '— unknown —')}</td>
+        <td>${escapeHtml(a.make || '')} ${escapeHtml(a.model || '')}</td>
+        <td>${escapeHtml(a.serialNumber || '')}</td>
+        <td>${escapeHtml(a.unitNumber || '')}</td>
+        <td>${a.currentHours == null ? '—' : a.currentHours}</td>
+        <td><button class="btn btn-secondary btn-sm" data-edit-asset="${a.id}">Edit</button></td>
+      </tr>`;
+  }).join('');
+  root.innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Name</th><th>Customer</th><th>Make/Model</th><th>Serial #</th><th>Unit #</th><th>Hours</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  root.querySelectorAll('[data-edit-asset]').forEach((b) => {
+    b.addEventListener('click', () => openAssetForm(b.dataset.editAsset));
+  });
+}
+
+// ---- Customer modal ----
+let editingCustomerId = null;
+
+function openCustomerForm(id) {
+  editingCustomerId = id || null;
+  const c = id ? customersCache.find((x) => x.id === id) : null;
+  $('#cf-title').textContent = c ? 'Edit Customer' : 'New Customer';
+  $('#cf-name').value = c ? c.name : '';
+  $('#cf-notes').value = c ? (c.notes || '') : '';
+  $('#cf-error').textContent = '';
+  $('#cf-delete').style.display = c ? '' : 'none';
+  $('#customer-form-modal').classList.add('show');
+  setTimeout(() => $('#cf-name').focus(), 50);
+}
+
+$('#new-customer-btn') && $('#new-customer-btn').addEventListener('click', () => openCustomerForm(null));
+
+$('#cf-save') && $('#cf-save').addEventListener('click', async () => {
+  const name = $('#cf-name').value.trim();
+  const notes = $('#cf-notes').value;
+  if (!name) { $('#cf-error').textContent = 'Name is required'; return; }
+  try {
+    if (editingCustomerId) {
+      await apiFetch(`/api/customers/${editingCustomerId}`, { method: 'PUT', body: JSON.stringify({ name, notes }) });
+    } else {
+      await apiFetch('/api/customers', { method: 'POST', body: JSON.stringify({ name, notes }) });
+    }
+    $('#customer-form-modal').classList.remove('show');
+    await refreshCustomers();
+  } catch (e) {
+    $('#cf-error').textContent = e.message || 'Save failed';
+  }
+});
+
+$('#cf-delete') && $('#cf-delete').addEventListener('click', async () => {
+  if (!editingCustomerId) return;
+  if (!confirm('Delete this customer? This cannot be undone.')) return;
+  try {
+    await apiFetch(`/api/customers/${editingCustomerId}`, { method: 'DELETE' });
+    $('#customer-form-modal').classList.remove('show');
+    await refreshCustomers();
+  } catch (e) {
+    $('#cf-error').textContent = e.message || 'Delete failed';
+  }
+});
+
+// ---- Asset modal ----
+let editingAssetId = null;
+
+function openAssetForm(id) {
+  editingAssetId = id || null;
+  const a = id ? assetsCache.find((x) => x.id === id) : null;
+  $('#af-title').textContent = a ? 'Edit Asset' : 'New Asset';
+  // Populate customer dropdown
+  const sel = $('#af-customer');
+  sel.innerHTML = customersCache.length
+    ? customersCache.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
+    : '<option value="">— No customers — create one first —</option>';
+  if (a) sel.value = a.customerId;
+  $('#af-name').value = a ? a.name : '';
+  $('#af-make').value = a ? (a.make || '') : '';
+  $('#af-model').value = a ? (a.model || '') : '';
+  $('#af-serial').value = a ? (a.serialNumber || '') : '';
+  $('#af-unit').value = a ? (a.unitNumber || '') : '';
+  $('#af-hours').value = a && a.currentHours != null ? a.currentHours : '';
+  $('#af-notes').value = a ? (a.notes || '') : '';
+  $('#af-error').textContent = '';
+  $('#af-delete').style.display = a ? '' : 'none';
+  $('#asset-form-modal').classList.add('show');
+  setTimeout(() => $('#af-name').focus(), 50);
+}
+
+$('#new-asset-btn') && $('#new-asset-btn').addEventListener('click', () => {
+  if (!customersCache.length) {
+    alert('Please create at least one Customer before adding assets.');
+    return;
+  }
+  openAssetForm(null);
+});
+
+$('#af-save') && $('#af-save').addEventListener('click', async () => {
+  const customerId = $('#af-customer').value;
+  const name = $('#af-name').value.trim();
+  if (!customerId) { $('#af-error').textContent = 'Customer is required'; return; }
+  if (!name) { $('#af-error').textContent = 'Asset name is required'; return; }
+  const hoursRaw = $('#af-hours').value;
+  const currentHours = hoursRaw === '' ? null : Number(hoursRaw);
+  if (hoursRaw !== '' && !isFinite(currentHours)) { $('#af-error').textContent = 'Hours must be a number'; return; }
+  const body = {
+    customerId,
+    name,
+    make: $('#af-make').value,
+    model: $('#af-model').value,
+    serialNumber: $('#af-serial').value,
+    unitNumber: $('#af-unit').value,
+    currentHours,
+    notes: $('#af-notes').value,
+  };
+  try {
+    if (editingAssetId) {
+      await apiFetch(`/api/assets/${editingAssetId}`, { method: 'PUT', body: JSON.stringify(body) });
+    } else {
+      await apiFetch('/api/assets', { method: 'POST', body: JSON.stringify(body) });
+    }
+    $('#asset-form-modal').classList.remove('show');
+    await refreshAssets();
+    await refreshCustomers(); // asset count column
+  } catch (e) {
+    $('#af-error').textContent = e.message || 'Save failed';
+  }
+});
+
+$('#af-delete') && $('#af-delete').addEventListener('click', async () => {
+  if (!editingAssetId) return;
+  if (!confirm('Delete this asset? This cannot be undone.')) return;
+  try {
+    await apiFetch(`/api/assets/${editingAssetId}`, { method: 'DELETE' });
+    $('#asset-form-modal').classList.remove('show');
+    await refreshAssets();
+    await refreshCustomers();
+  } catch (e) {
+    $('#af-error').textContent = e.message || 'Delete failed';
+  }
+});
+
+// Mobile menu buttons
+$('#menu-btn-4') && $('#menu-btn-4').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+$('#menu-btn-5') && $('#menu-btn-5').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+
+// Hook into setView so customers/assets sections show/hide and load on demand
+const _origSetView2 = setView;
+setView = function(v) {
+  _origSetView2(v);
+  $('#view-customers') && ($('#view-customers').style.display = v === 'customers' ? '' : 'none');
+  $('#view-assets')    && ($('#view-assets').style.display    = v === 'assets'    ? '' : 'none');
+  if (v === 'customers') refreshCustomers();
+  if (v === 'assets') { refreshAssets(); refreshCustomers(); }
+};
+
+// Hook into refreshAll so caches stay fresh
+const _origRefreshAll2 = refreshAll;
+refreshAll = async function() {
+  await _origRefreshAll2();
+  await refreshCustomers();
+  await refreshAssets();
+};
+
+// Tiny CSS for data tables (idempotent: id-scoped)
+(function injectT11Styles(){
+  if (document.getElementById('t11-styles')) return;
+  const s = document.createElement('style');
+  s.id = 't11-styles';
+  s.textContent = `
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th, .data-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      font-size: 14px;
+    }
+    .data-table th {
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .data-table tr:hover td { background: var(--panel-2); }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+  `;
+  document.head.appendChild(s);
+})();
+
 // ===== Boot (Ticket 10) =====
 bootAuth();
 })();
