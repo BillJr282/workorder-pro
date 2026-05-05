@@ -689,7 +689,7 @@ app.post("/api/templates", requireAdmin, (req, res) => {
   }
   const allowedWorkTypes = ["", "repair", "install", "maintenance", "inspection"];
   const wt = allowedWorkTypes.includes(workType) ? workType : "";
-  const allowedPriorities = ["low", "medium", "high"];
+  const allowedPriorities = ["low", "medium", "high", "urgent"];
   const pr = allowedPriorities.includes(priority) ? priority : "medium";
   const cleanParts = Array.isArray(parts) ? parts.map((p) => ({
     partNumber: typeof p.partNumber === "string" ? p.partNumber : "",
@@ -731,7 +731,7 @@ app.put("/api/templates/:id", requireAdmin, (req, res) => {
   if (typeof description === "string") t.description = description;
   const allowedWorkTypes = ["", "repair", "install", "maintenance", "inspection"];
   if (allowedWorkTypes.includes(workType)) t.workType = workType;
-  const allowedPriorities = ["low", "medium", "high"];
+  const allowedPriorities = ["low", "medium", "high", "urgent"];
   if (allowedPriorities.includes(priority)) t.priority = priority;
   if (customerId === null || customerId === "") {
     t.customerId = null;
