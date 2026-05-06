@@ -2879,11 +2879,8 @@ let usersLiteCache = [];
 async function ensureUsersLite() {
   if (usersLiteCache && usersLiteCache.length) return usersLiteCache;
   try {
-    const r = await apiFetch('/api/users-lite');
-    if (r && r.ok) {
-      const data = await r.json();
-      if (Array.isArray(data)) usersLiteCache = data;
-    }
+    const data = await apiFetch('/api/users-lite');
+    if (Array.isArray(data)) usersLiteCache = data;
   } catch (e) { /* ignore */ }
   return usersLiteCache;
 }
