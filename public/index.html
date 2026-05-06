@@ -566,7 +566,12 @@
   gap: 8px;
   margin: 0 0 12px;
   padding: 0 4px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+}
+.wo-search-row > * { flex-shrink: 0; }
+.wo-search-row .wo-search-input-wrap { flex-shrink: 1; }
+@media (max-width: 640px) {
+  .wo-search-row { flex-wrap: wrap; }
 }
 .wo-search-label {
   color: var(--muted);
