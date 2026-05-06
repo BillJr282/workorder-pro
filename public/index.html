@@ -559,6 +559,83 @@
 .wo-ca.wo-card .wo-meta { margin-bottom: 6px; }
 
   /* ━━━━━━━━━━ Ticket 20: WO list tabs ━━━━━━━━━━ */
+/* ===== T17 PART 1 — search row styles ===== */
+.wo-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0 4px;
+  flex-wrap: wrap;
+}
+.wo-search-label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.wo-search-scope {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  min-width: 110px;
+}
+.wo-search-scope:focus { outline: 2px solid #3b82f6; outline-offset: 1px; }
+.wo-search-input-wrap {
+  position: relative;
+  flex: 1 1 280px;
+  min-width: 220px;
+  max-width: 480px;
+}
+.wo-search-input {
+  width: 100%;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 32px 7px 12px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+.wo-search-input:focus { outline: 2px solid #3b82f6; outline-offset: 1px; border-color: #3b82f6; }
+.wo-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.wo-search-clear:hover { color: var(--text); background: var(--panel); }
+.wo-search-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 16px;
+  color: var(--muted);
+}
+.wo-search-empty .btn-clear-search {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.wo-search-empty .btn-clear-search:hover { border-color: #3b82f6; color: #60a5fa; }
+/* ===== end T17 PART 1 search row styles ===== */
+
 .wo-tabs {
   display: flex;
   gap: 4px;
@@ -759,6 +836,32 @@
           </div>
           <button class="btn" id="new-wo-btn">+ New Work Order</button>
         </div>
+        <!-- ===== T17 PART 1 START — scoped search row ===== -->
+        <div class="wo-search-row" id="wo-search-row">
+          <label class="wo-search-label" for="wo-search-scope">Search by:</label>
+          <select id="wo-search-scope" class="wo-search-scope">
+            <option value="customer">Customer</option>
+            <option value="asset">Asset</option>
+            <option value="status">Status</option>
+          </select>
+          <div class="wo-search-input-wrap">
+            <input
+              type="text"
+              id="wo-search-text"
+              class="wo-search-input"
+              placeholder="Type a customer name…"
+              autocomplete="off"
+            />
+            <select id="wo-search-status" class="wo-search-input" style="display:none;">
+              <option value="">Any status</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In progress</option>
+              <option value="completed">Completed</option>
+            </select>
+            <button type="button" class="wo-search-clear" id="wo-search-clear" title="Clear search" style="display:none;">✕</button>
+          </div>
+        </div>
+        <!-- ===== T17 PART 1 END ===== -->
         <div class="wo-tabs" id="wo-tabs">
           <button type="button" class="wo-tab active" data-tab="created">Created <span class="wo-tab-count" data-count="created">0</span></button>
           <button type="button" class="wo-tab" data-tab="assigned">Assigned <span class="wo-tab-count" data-count="assigned">0</span></button>
@@ -1745,6 +1848,38 @@ $('#wof-add-other').addEventListener('click', () => {
     return 'created';
   }
 
+ // ===== T17 PART 2 START — search state + helpers =====
+  const woSearch = { scope: 'customer', text: '', status: '' };
+
+  function woSearchActive() {
+    if (woSearch.scope === 'status') return !!woSearch.status;
+    return !!(woSearch.text && woSearch.text.trim());
+  }
+
+  function woMatchesSearch(w) {
+    if (!woSearchActive()) return true;
+    if (woSearch.scope === 'status') {
+      return (w.status || 'open') === woSearch.status;
+    }
+    const needle = woSearch.text.trim().toLowerCase();
+    if (!needle) return true;
+    if (woSearch.scope === 'customer') {
+      const hay = (w.customerName || '').toLowerCase();
+      return hay.includes(needle);
+    }
+    if (woSearch.scope === 'asset') {
+      const a = w.asset || {};
+      const hay = [
+        a.name || '',
+        a.serialNumber || '',
+        a.unitNumber || '',
+      ].join(' ').toLowerCase();
+      return hay.includes(needle);
+    }
+    return true;
+  }
+  // ===== T17 PART 2 END — search state + helpers =====
+
   function renderWorkOrders() {
     const list = $('#wo-list');
     list.innerHTML = '';
@@ -1760,15 +1895,29 @@ $('#wof-add-other').addEventListener('click', () => {
     document.querySelectorAll('.wo-tab').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tab === state.activeWoTab);
     });
-    // Render only the active bucket
-    const visible = buckets[state.activeWoTab] || [];
+    // Render only the active bucket — T17: apply search filter
+    const rawVisible = buckets[state.activeWoTab] || [];
+    const visible = rawVisible.filter(woMatchesSearch);
     if (!visible.length) {
-      const emptyMsg = state.activeWoTab === 'created'
-        ? 'No created work orders. Click "+ New Work Order" to add one.'
-        : state.activeWoTab === 'assigned'
-        ? 'Nothing assigned yet.'
-        : 'No completed work orders.';
-      list.appendChild(el('div', { class: 'empty' }, emptyMsg));
+      if (woSearchActive()) {
+        // T17: search-active empty state with Clear button
+        const wrap = el('div', { class: 'wo-search-empty' },
+          el('div', {}, 'No work orders match your search.'),
+          el('button', {
+            class: 'btn-clear-search',
+            type: 'button',
+            onclick: () => clearWoSearch(),
+          }, 'Clear search'),
+        );
+        list.appendChild(wrap);
+      } else {
+        const emptyMsg = state.activeWoTab === 'created'
+          ? 'No created work orders. Click "+ New Work Order" to add one.'
+          : state.activeWoTab === 'assigned'
+          ? 'Nothing assigned yet.'
+          : 'No completed work orders.';
+        list.appendChild(el('div', { class: 'empty' }, emptyMsg));
+      }
       return;
     }
     visible.forEach(w => {
@@ -2086,11 +2235,80 @@ function openWoForm(wo) {
 
   // ━━━━━━━━━━ Ticket 20: tab clicks + lifecycle helper ━━━━━━━━━━
   document.querySelectorAll('.wo-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      state.activeWoTab = btn.dataset.tab;
-      renderWorkOrders();
+      btn.addEventListener('click', () => {
+        state.activeWoTab = btn.dataset.tab;
+        renderWorkOrders();
+      });
     });
-  });
+
+    // ===== T17 PART 2 — search wiring =====
+    const scopeSel = document.getElementById('wo-search-scope');
+    const textInput = document.getElementById('wo-search-text');
+    const statusSel = document.getElementById('wo-search-status');
+    const clearBtn = document.getElementById('wo-search-clear');
+
+    function updateClearBtnVisibility() {
+      if (clearBtn) clearBtn.style.display = woSearchActive() ? 'block' : 'none';
+    }
+
+    function applyScopeUI() {
+      const scope = woSearch.scope;
+      if (scope === 'status') {
+        textInput.style.display = 'none';
+        statusSel.style.display = 'block';
+      } else {
+        textInput.style.display = 'block';
+        statusSel.style.display = 'none';
+        textInput.placeholder = scope === 'customer'
+          ? 'Type a customer name…'
+          : 'Type asset name, serial, or unit #…';
+      }
+      updateClearBtnVisibility();
+    }
+
+    if (scopeSel) {
+      scopeSel.addEventListener('change', () => {
+        woSearch.scope = scopeSel.value;
+        // reset values so we don't carry stale text into a status search
+        woSearch.text = '';
+        woSearch.status = '';
+        if (textInput) textInput.value = '';
+        if (statusSel) statusSel.value = '';
+        applyScopeUI();
+        renderWorkOrders();
+      });
+    }
+    if (textInput) {
+      textInput.addEventListener('input', () => {
+        woSearch.text = textInput.value;
+        updateClearBtnVisibility();
+        renderWorkOrders();
+      });
+    }
+    if (statusSel) {
+      statusSel.addEventListener('change', () => {
+        woSearch.status = statusSel.value;
+        updateClearBtnVisibility();
+        renderWorkOrders();
+      });
+    }
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => clearWoSearch());
+    }
+
+    // expose so the empty-state "Clear search" button can call it
+    window.clearWoSearch = function () {
+      woSearch.text = '';
+      woSearch.status = '';
+      if (textInput) textInput.value = '';
+      if (statusSel) statusSel.value = '';
+      updateClearBtnVisibility();
+      renderWorkOrders();
+    };
+
+    // initial UI sync
+    applyScopeUI();
+    // ===== end T17 PART 2 search wiring =====
 
   async function changeWoStatus(newStatus) {
     if (!state.activeWO) return;
