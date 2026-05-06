@@ -1543,8 +1543,90 @@ function renderWofParts() {
 function renderWofLabor() {
   const tbody = $('#wof-labor-body');
   if (!tbody) return;
-  ensureUsersLite();
-  const labor = wofState.labor || [];
+  ensureUsersLite().then(() => {
+    // re-render once users-lite arrives, but only if we're still on the same form
+    if ($('#wof-labor-body') === tbody) renderWofLaborRows();
+  });
+  renderWofLaborRows();
+}
+
+function renderWofLaborRows() {
+  const tbody = $('#wof-labor-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  if (!woFormEdit.labor.length) {
+    tbody.appendChild(el('tr', { class: 'li-empty' }, el('td', { colspan: 7 }, 'No labor. Click "+ Add labor" to add one.')));
+    return;
+  }
+  const userOptions = (usersLiteCache || []).map(u => u.username).filter(Boolean);
+  woFormEdit.labor.forEach(l => {
+    const tr = el('tr');
+
+    // Technician cell — dropdown when current value is empty or matches a known user
+    const currentTech = (l.technician || '').trim();
+    const inList = !currentTech || userOptions.includes(currentTech);
+    let techNode;
+    if (inList && userOptions.length) {
+      techNode = document.createElement('select');
+      techNode.className = 'li-tech-select';
+      let html = '<option value="">— pick —</option>';
+      userOptions.forEach(u => {
+        const safe = escapeHtml(u);
+        const sel = u === currentTech ? ' selected' : '';
+        html += '<option value="' + safe + '"' + sel + '>' + safe + '</option>';
+      });
+      html += '<option value="__custom__">(custom…)</option>';
+      techNode.innerHTML = html;
+      techNode.addEventListener('change', () => {
+        if (techNode.value === '__custom__') {
+          l.technician = '';
+          renderWofLaborRows();
+        } else {
+          l.technician = techNode.value;
+        }
+      });
+    } else {
+      techNode = el('input', { type: 'text' });
+      techNode.value = currentTech;
+      techNode.placeholder = 'Technician';
+      bindRowInput(techNode, l, 'technician');
+    }
+
+    const dateInp = el('input', { type: 'date' });
+    dateInp.value = l.date || '';
+    bindRowInput(dateInp, l, 'date');
+
+    const hoursInp = el('input', { type: 'number', step: '0.25', min: '0' });
+    hoursInp.value = l.hours || '';
+    bindRowInput(hoursInp, l, 'hours', { numeric: true, recalc: true });
+
+    const rateInp = el('input', { type: 'number', step: '0.01', min: '0' });
+    rateInp.value = l.hourlyRate || '';
+    bindRowInput(rateInp, l, 'hourlyRate', { numeric: true, recalc: true });
+
+    const notesInp = el('input', { type: 'text' });
+    notesInp.value = l.notes || '';
+    notesInp.placeholder = 'Notes';
+    bindRowInput(notesInp, l, 'notes');
+
+    const ltCell = el('td', { class: 'li-line-total' }, fmtCAD(l.lineTotal || 0));
+
+    const removeBtn = el('button', { type: 'button', class: 'li-remove', onclick: () => {
+      woFormEdit.labor = woFormEdit.labor.filter(x => x.id !== l.id);
+      renderWofLaborRows();
+      recomputeWofTotals();
+    } }, '✕');
+
+    tr.appendChild(el('td', {}, techNode));
+    tr.appendChild(el('td', {}, dateInp));
+    tr.appendChild(el('td', { class: 'li-num' }, hoursInp));
+    tr.appendChild(el('td', { class: 'li-num' }, rateInp));
+    tr.appendChild(el('td', {}, notesInp));
+    tr.appendChild(ltCell);
+    tr.appendChild(el('td', {}, removeBtn));
+    tbody.appendChild(tr);
+  });
+}
   if (!labor.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:8px;">No labor entries yet.</td></tr>';
     return;
