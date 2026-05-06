@@ -111,6 +111,7 @@
     max-width: 90%;
   }
   .login-card h1 { margin: 0 0 8px; font-size: 24px; }
+  .login-logo { display: block; height: 48px; width: auto; max-width: 100%; margin: 0 auto 16px; }
   .login-card p { margin: 0 0 24px; color: var(--muted); }
   .login-card label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--muted); }
   .login-card .field { margin-bottom: 16px; }
@@ -874,7 +875,7 @@
 <div id="login-screen">
   <!-- Login form (shown when system is initialized) -->
   <div class="login-card" id="login-form">
-    <h1>WorkOrder Pro</h1>
+    <img src="/wordmark.svg" alt="WM Service" class="login-logo">
     <p>Sign in to continue</p>
     <div class="field">
       <label for="login-user">Username</label>
@@ -890,7 +891,7 @@
 
   <!-- First-time setup form (shown when users[] is empty) -->
   <div class="login-card" id="setup-form" style="display:none;">
-    <h1>Welcome to WorkOrder Pro</h1>
+    <img src="/wordmark.svg" alt="WM Service" class="login-logo">
     <p>Create the first administrator account.</p>
     <div class="field">
       <label for="setup-user">Username</label>
@@ -914,7 +915,7 @@
 
   <!-- Loading state while we check setup status -->
   <div class="login-card" id="auth-loading">
-    <h1>WorkOrder Pro</h1>
+    <img src="/wordmark.svg" alt="WM Service" class="login-logo">
     <p>Loading…</p>
   </div>
 </div>
