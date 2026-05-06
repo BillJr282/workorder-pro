@@ -2911,7 +2911,19 @@ $('#wof-new-asset-btn') && $('#wof-new-asset-btn').addEventListener('click', () 
 // ============================================================
 let customersCache = [];
 let assetsCache = [];
+let usersLiteCache = [];
 
+async function ensureUsersLite() {
+  if (usersLiteCache && usersLiteCache.length) return usersLiteCache;
+  try {
+    const r = await apiFetch('/api/users-lite');
+    if (r && r.ok) {
+      const data = await r.json();
+      if (Array.isArray(data)) usersLiteCache = data;
+    }
+  } catch (e) { /* ignore */ }
+  return usersLiteCache;
+}
 async function refreshCustomers() {
   try {
     customersCache = await apiFetch('/api/customers');
