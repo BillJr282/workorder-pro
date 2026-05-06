@@ -422,6 +422,200 @@ app.delete("/api/workorders/:id", (req, res) => {
   res.json({ ok: true, removed });
 });
 
+// ---------- Ticket 13: Print / Printable HTML for a Work Order ----------
+function escHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderWorkOrderPrintHtml(wo) {
+  const a = wo.asset || {};
+  const parts = Array.isArray(wo.parts) ? wo.parts : [];
+  const labor = Array.isArray(wo.labor) ? wo.labor : [];
+  // Photos: collect from procedure responses where field type was "photo"
+  const photos = [];
+  (wo.procedures || []).forEach((proc) => {
+    (proc.responses || []).forEach((resp) => {
+      // resp may be {fieldId, type, value} — value for photo is base64 data URL
+      if (resp && resp.type === "photo" && resp.value) {
+        photos.push({ caption: resp.label || "", src: resp.value });
+      }
+      // Some shapes: responses keyed by fieldId on a values map
+    });
+    if (proc.values && typeof proc.values === "object") {
+      Object.entries(proc.values).forEach(([fid, val]) => {
+        if (typeof val === "string" && val.startsWith("data:image")) {
+          photos.push({ caption: "", src: val });
+        }
+      });
+    }
+  });
+
+  const created = wo.createdAt ? new Date(wo.createdAt).toLocaleString() : "";
+  const updated = wo.updatedAt ? new Date(wo.updatedAt).toLocaleString() : "";
+  const woNumber = (wo.id || "").slice(0, 8).toUpperCase();
+
+  const partsRows = parts.length
+    ? parts.map((p) => `
+        <tr>
+          <td>${escHtml(p.partNumber || "")}</td>
+          <td>${escHtml(p.description || "")}</td>
+          <td style="text-align:right;">${escHtml(p.quantity != null ? p.quantity : "")}</td>
+        </tr>`).join("")
+    : `<tr><td colspan="3" style="text-align:center; color:#666; font-style:italic;">No parts listed.</td></tr>`;
+
+  const laborRows = labor.length
+    ? labor.map((l) => `
+        <tr>
+          <td>${escHtml(l.technician || l.tech || "")}</td>
+          <td>${escHtml(l.date || "")}</td>
+          <td style="text-align:right;">${escHtml(l.hours != null ? l.hours : "")}</td>
+        </tr>`).join("")
+    : `<tr><td colspan="3" style="text-align:center; color:#666; font-style:italic;">No labor recorded.</td></tr>`;
+
+  const photosHtml = photos.length
+    ? `<div class="photos-grid">${photos.map((p) => `
+        <div class="photo-cell">
+          <img src="${escHtml(p.src)}" alt="${escHtml(p.caption)}" />
+          ${p.caption ? `<div class="photo-cap">${escHtml(p.caption)}</div>` : ""}
+        </div>`).join("")}</div>`
+    : `<div class="muted">No photos attached.</div>`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Work Order ${escHtml(woNumber)} — ${escHtml(wo.title || "")}</title>
+<style>
+  @page { size: Letter portrait; margin: 0.5in; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 0; padding: 24px; line-height: 1.4; font-size: 12px; }
+  h1 { margin: 0; font-size: 22px; }
+  h2 { font-size: 13px; margin: 16px 0 6px 0; padding-bottom: 4px; border-bottom: 1.5px solid #111; text-transform: uppercase; letter-spacing: 0.5px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #111; padding-bottom: 12px; margin-bottom: 16px; }
+  .brand { font-weight: bold; font-size: 18px; }
+  .wo-meta { text-align: right; font-size: 11px; }
+  .wo-meta .wo-num { font-size: 16px; font-weight: bold; margin-bottom: 2px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 8px; }
+  .block { border: 1px solid #999; padding: 8px 10px; border-radius: 3px; }
+  .label { color: #555; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .value { font-size: 12px; margin-bottom: 6px; }
+  .value:last-child { margin-bottom: 0; }
+  .desc { white-space: pre-wrap; padding: 8px 10px; border: 1px solid #999; border-radius: 3px; min-height: 40px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th, td { border: 1px solid #999; padding: 5px 7px; text-align: left; }
+  th { background: #eee; font-size: 10px; text-transform: uppercase; }
+  .muted { color: #666; font-style: italic; }
+  .photos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .photo-cell { border: 1px solid #999; padding: 4px; }
+  .photo-cell img { width: 100%; height: auto; display: block; max-height: 180px; object-fit: contain; }
+  .photo-cap { font-size: 10px; color: #555; margin-top: 4px; text-align: center; }
+  .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 32px; }
+  .sig-line { border-top: 1px solid #111; padding-top: 4px; font-size: 10px; color: #555; text-align: center; }
+  .footer-meta { margin-top: 24px; font-size: 9px; color: #888; text-align: center; }
+  .print-bar { background: #f4f4f4; padding: 8px 12px; border-bottom: 1px solid #ccc; margin: -24px -24px 16px -24px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+  .print-btn { padding: 4px 10px; cursor: pointer; }
+  @media print {
+    .print-bar { display: none; }
+    body { padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="print-bar">
+  <span>Press Ctrl+P (or Cmd+P) to print or save as PDF.</span>
+  <button class="print-btn" onclick="window.print()">🖨 Print</button>
+</div>
+<div class="header">
+  <div>
+    <div class="brand">WorkOrder Pro</div>
+    <div style="font-size:10px; color:#555;">Maintenance Management</div>
+  </div>
+  <div class="wo-meta">
+    <div class="wo-num">WO-${escHtml(woNumber)}</div>
+    <div>Created: ${escHtml(created)}</div>
+    <div>Updated: ${escHtml(updated)}</div>
+  </div>
+</div>
+
+<h1>${escHtml(wo.title || "(untitled work order)")}</h1>
+
+<div class="grid-2" style="margin-top:12px;">
+  <div class="block">
+    <div class="label">Customer</div>
+    <div class="value">${escHtml(wo.customerName || "—")}</div>
+  </div>
+  <div class="block">
+    <div class="label">Status / Priority</div>
+    <div class="value"><strong>${escHtml((wo.status || "open").toUpperCase())}</strong> · ${escHtml((wo.priority || "medium").toUpperCase())}</div>
+    <div class="label">Type</div>
+    <div class="value">${escHtml(wo.workType || "—")}</div>
+    <div class="label">Assignee</div>
+    <div class="value">${escHtml(wo.assignee || "—")}</div>
+  </div>
+</div>
+
+<h2>Asset</h2>
+<div class="grid-2">
+  <div class="block">
+    <div class="label">Name</div>
+    <div class="value">${escHtml(a.name || "—")}</div>
+    <div class="label">Make / Model</div>
+    <div class="value">${escHtml(a.make || "")} ${escHtml(a.model || "")}</div>
+    <div class="label">Unit Number</div>
+    <div class="value">${escHtml(a.unitNumber || "—")}</div>
+  </div>
+  <div class="block">
+    <div class="label">Serial Number</div>
+    <div class="value">${escHtml(a.serialNumber || "—")}</div>
+    <div class="label">Hours (current)</div>
+    <div class="value">${escHtml(a.hours != null ? a.hours : "—")}</div>
+    <div class="label">Hours at Service</div>
+    <div class="value">${escHtml(wo.hoursAtService != null ? wo.hoursAtService : "—")}</div>
+  </div>
+</div>
+
+<h2>Description</h2>
+<div class="desc">${escHtml(wo.description || "")}</div>
+
+<h2>Parts</h2>
+<table>
+  <thead><tr><th style="width:25%;">Part Number</th><th>Description</th><th style="width:10%; text-align:right;">Qty</th></tr></thead>
+  <tbody>${partsRows}</tbody>
+</table>
+
+<h2>Labor</h2>
+<table>
+  <thead><tr><th>Technician</th><th style="width:20%;">Date</th><th style="width:15%; text-align:right;">Hours</th></tr></thead>
+  <tbody>${laborRows}</tbody>
+</table>
+
+<h2>Photos</h2>
+${photosHtml}
+
+<div class="signatures">
+  <div class="sig-line">Technician Signature / Date</div>
+  <div class="sig-line">Customer Signature / Date</div>
+</div>
+
+<div class="footer-meta">WorkOrder Pro · WO-${escHtml(woNumber)} · Generated ${escHtml(new Date().toLocaleString())}</div>
+</body>
+</html>`;
+}
+
+app.get("/api/workorders/:id/print", (req, res) => {
+  const data = loadData();
+  const wo = data.workorders.find((w) => w.id === req.params.id);
+  if (!wo) return res.status(404).send("<h1>404 — Work Order not found</h1>");
+  const html = renderWorkOrderPrintHtml(wo);
+  res.set("Content-Type", "text/html; charset=utf-8");
+  res.send(html);
+});
+
 // ---------- Procedures ----------
 const ALLOWED_FIELD_TYPES = ["checkbox", "text", "number", "passfail", "date", "signature", "photo"];
 
