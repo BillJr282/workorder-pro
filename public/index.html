@@ -227,13 +227,13 @@
     font-weight: 500;
     text-transform: uppercase;
   }
-  .badge-open { background: #1e40af; color: #dbeafe; }
-  .badge-in_progress { background: #92400e; color: #fef3c7; }
-  .badge-complete { background: #166534; color: #dcfce7; }
-  .badge-low { background: #475569; color: #e2e8f0; }
-  .badge-medium { background: #1e40af; color: #dbeafe; }
-  .badge-high { background: #92400e; color: #fef3c7; }
-  .badge-urgent { background: #991b1b; color: #fee2e2; }
+  .badge-open { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+  .badge-in_progress { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+  .badge-complete { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+  .badge-low { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+  .badge-medium { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+  .badge-high { background: #fed7aa; color: #9a3412; border: 1px solid #fdba74; }
+  .badge-urgent { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
   .empty {
     text-align: center;
     padding: 48px 16px;
@@ -466,12 +466,12 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: rgba(139, 92, 246, 0.15);
-    border: 1px solid rgba(139, 92, 246, 0.4);
+    background: rgba(139, 92, 246, 0.12);
+    border: 1px solid rgba(139, 92, 246, 0.35);
     border-radius: 12px;
     padding: 3px 10px;
     font-size: 11px;
-    color: #c4b5fd;
+    color: #6d28d9;
     margin: 2px 0;
   }
   .chat-tool-pill.error { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #fca5a5; }
@@ -802,8 +802,8 @@
 }
 .wo-tab.active .wo-tab-count {
   background: rgba(59,130,246,0.15);
-  color: #60a5fa;
-  border-color: rgba(59,130,246,0.35);
+  color: #1d4ed8;
+  border-color: rgba(59,130,246,0.45);
 }
 
   /* ━━━━━━━━━━ Ticket 21: Priority colors ━━━━━━━━━━ */
