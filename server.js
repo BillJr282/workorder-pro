@@ -400,14 +400,36 @@ app.put("/api/workorders/:id", (req, res) => {
   if (!wo) return res.status(404).json({ error: "Not found" });
   const body = req.body || {};
   const { title, description, status, priority, assignee } = body;
+  const allowedStatuses = ["open", "in_progress", "completed"];
   if (title !== undefined) wo.title = title;
   if (description !== undefined) wo.description = description;
   if (status !== undefined && status !== wo.status) {
-    logActivity(wo, `Status changed to ${status}`);
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Allowed: ${allowedStatuses.join(", ")}` });
+    }
+    const prevStatus = wo.status;
+    logActivity(wo, `Status changed: ${prevStatus} → ${status}`);
     wo.status = status;
+    // Auto-stamp lifecycle timestamps
+    const nowIso = new Date().toISOString();
+    if (status === "in_progress" && !wo.startedAt) wo.startedAt = nowIso;
+    if (status === "completed") wo.completedAt = nowIso;
+    if (prevStatus === "completed" && status !== "completed") wo.completedAt = null;
   }
   if (priority !== undefined) wo.priority = priority;
-  if (assignee !== undefined) wo.assignee = assignee;
+  if (assignee !== undefined) {
+    const prevAssignee = wo.assignee || "";
+    wo.assignee = assignee;
+    // Auto-stamp on first assignment (empty → non-empty)
+    if (!prevAssignee && assignee && !wo.assignedAt) {
+      wo.assignedAt = new Date().toISOString();
+      logActivity(wo, `Assigned to ${assignee}`);
+    } else if (prevAssignee && !assignee) {
+      logActivity(wo, `Unassigned (was ${prevAssignee})`);
+    } else if (prevAssignee && assignee && prevAssignee !== assignee) {
+      logActivity(wo, `Reassigned: ${prevAssignee} → ${assignee}`);
+    }
+  }
   applyWorkOrderUpdates(wo, body);
   wo.updatedAt = new Date().toISOString();
   saveData(data);
@@ -558,6 +580,13 @@ function renderWorkOrderPrintHtml(wo) {
     <div class="value">${escHtml(wo.workType || "—")}</div>
     <div class="label">Assignee</div>
     <div class="value">${escHtml(wo.assignee || "—")}</div>
+    <div class="label">Lifecycle</div>
+    <div class="value" style="font-size:11px;">
+      ${wo.assignedAt ? "Assigned: " + escHtml(new Date(wo.assignedAt).toLocaleString()) + "<br/>" : ""}
+      ${wo.startedAt ? "Started: " + escHtml(new Date(wo.startedAt).toLocaleString()) + "<br/>" : ""}
+      ${wo.completedAt ? "Completed: " + escHtml(new Date(wo.completedAt).toLocaleString()) : ""}
+      ${(!wo.assignedAt && !wo.startedAt && !wo.completedAt) ? "—" : ""}
+    </div>
   </div>
 </div>
 
@@ -1311,24 +1340,27 @@ const TOOLS = [
     run: (input) => {
       const data = loadData();
       const wo = {
-        id: uuidv4(),
-        title: input.title,
-        description: input.description || "",
-        status: input.status || "open",
-        priority: input.priority || "medium",
-        assignee: input.assignee || "",
-        customerName: "",
-        workType: "",
-        asset: normalizeAsset({}),
-        parts: [],
-        labor: [],
-        otherCosts: [],
-        totals: { parts: 0, labor: 0, other: 0, grand: 0 },
-        procedures: [],
-        activity: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+    id: uuidv4(),
+    title,
+    description: description || "",
+    status: status || "open",
+    priority: priority || "medium",
+    assignee: assignee || "",
+    customerName: "",
+    workType: "",
+    asset: normalizeAsset({}),
+    parts: [],
+    labor: [],
+    otherCosts: [],
+    totals: { parts: 0, labor: 0, other: 0, grand: 0 },
+    procedures: [],
+    activity: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    assignedAt: assignee ? new Date().toISOString() : null,
+    startedAt: null,
+    completedAt: null,
+  };
       applyWorkOrderUpdates(wo, input);
       logActivity(wo, `Work order created via AI assistant: ${wo.title}`);
       data.workorders.push(wo);
