@@ -142,6 +142,7 @@ function normalizeLabor(l) {
     date: typeof l.date === "string" ? l.date : "",
     hours,
     hourlyRate,
+    notes: typeof l.notes === "string" ? l.notes : "",
     lineTotal: round2(hours * hourlyRate),
   };
 }
@@ -474,8 +475,9 @@ function renderWorkOrderPrintHtml(wo) {
           <td>${escHtml(l.technician || l.tech || "")}</td>
           <td>${escHtml(l.date || "")}</td>
           <td style="text-align:right;">${escHtml(l.hours != null ? l.hours : "")}</td>
+          <td>${escHtml(l.notes || "")}</td>
         </tr>`).join("")
-    : `<tr><td colspan="3" style="text-align:center; color:#666; font-style:italic;">No labor recorded.</td></tr>`;
+    : `<tr><td colspan="4" style="text-align:center; color:#666; font-style:italic;">No labor recorded.</td></tr>`;
 
   const photosHtml = photos.length
     ? `<div class="photos-grid">${photos.map((p) => `
@@ -590,7 +592,7 @@ function renderWorkOrderPrintHtml(wo) {
 
 <h2>Labor</h2>
 <table>
-  <thead><tr><th>Technician</th><th style="width:20%;">Date</th><th style="width:15%; text-align:right;">Hours</th></tr></thead>
+  <thead><tr><th style="width:20%;">Technician</th><th style="width:15%;">Date</th><th style="width:10%; text-align:right;">Hours</th><th>Notes</th></tr></thead>
   <tbody>${laborRows}</tbody>
 </table>
 
@@ -1952,6 +1954,13 @@ app.post("/api/assistant", async (req, res) => {
 // ---------- Users (admin-only) ----------
 
 // List all users (admin-only). Sessions are not exposed.
+// Ticket 14: lightweight users list for dropdowns (any logged-in user)
+app.get("/api/users-lite", (req, res) => {
+  const data = loadData();
+  const list = (data.users || []).map((u) => ({ id: u.id, username: u.username, role: u.role }));
+  res.json(list);
+});
+
 app.get("/api/users", requireAdmin, (req, res) => {
   const data = req.dataCache || loadData();
   const list = data.users
