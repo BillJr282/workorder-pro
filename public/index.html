@@ -262,6 +262,28 @@
     align-items: center;
   }
   .modal-header h3 { margin: 0; font-size: 18px; }
+  /* ===== Polish: make modal close ✕ visible & tappable on mobile ===== */
+  .modal-header .btn-icon {
+    font-size: 24px;
+    line-height: 1;
+    padding: 8px 14px;
+    min-width: 44px;
+    min-height: 44px;
+    color: var(--text);
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-header .btn-icon:hover,
+  .modal-header .btn-icon:active {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border-color: #ef4444;
+  }
+  /* ===== end modal close polish ===== */
   .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
   .modal-footer {
     padding: 12px 20px;
