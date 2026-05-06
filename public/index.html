@@ -525,24 +525,102 @@
   /* Mobile */
   @media (max-width: 720px) {
     .app-grid { grid-template-columns: 1fr; }
+    /* ===== T19 PART 1 — mobile app shell ===== */
+    .app-grid { grid-template-columns: 1fr !important; }
     .sidebar {
       position: fixed;
-      left: -240px;
+      left: -260px;
       top: 0;
       bottom: 0;
-      width: 220px;
-      z-index: 50;
-      transition: left 0.2s;
+      width: 240px;
+      z-index: 120;
+      transition: left 0.22s ease;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.4);
     }
     .sidebar.open { left: 0; }
+    .sidebar-backdrop.show { display: block; }
     .mobile-menu-btn { display: inline-flex !important; }
+   .main { padding: 12px !important; }
+    /* ===== end T19 PART 1 mobile app shell ===== */
+
+    /* ===== T19 PART 2 — mobile cards + tabs ===== */
+    .card-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+    .wo-card { padding: 12px !important; }
+    .wo-tabs {
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .wo-tabs::-webkit-scrollbar { display: none; }
+    .wo-tab { white-space: nowrap; flex-shrink: 0; }
+    .view-header { flex-wrap: wrap; gap: 10px; }
+    .view-header h2 { font-size: 18px !important; }
+    /* ===== end T19 PART 2 mobile cards + tabs ===== */
+
+    /* ===== T19 PART 2 — mobile modal full-screen ===== */
+    .modal-backdrop { padding: 0 !important; }
+    .modal {
+      width: 100% !important;
+      max-width: 100% !important;
+      max-height: 100vh !important;
+      height: 100vh !important;
+      border-radius: 0 !important;
+      border: 0 !important;
+    }
+    .modal-body { padding: 14px !important; }
+    .modal-header { padding: 14px 16px !important; }
+    /* Stack any 2-col grids inside modals/forms */
+    .form-row,
+    .form-grid,
+    .field-grid,
+    .two-col,
+    .row-2col { grid-template-columns: 1fr !important; display: grid !important; gap: 10px !important; }
+    /* Form inputs full-width on mobile */
+    .modal input[type="text"],
+    .modal input[type="number"],
+    .modal input[type="date"],
+    .modal select,
+    .modal textarea { width: 100% !important; box-sizing: border-box; }
+    /* ===== end T19 PART 2 mobile modal ===== */
     .field-row-2col { grid-template-columns: 1fr; }
     .pb-field-row { grid-template-columns: 1fr; }
     .proc-field { grid-template-columns: 1fr; }
     .proc-field-input { justify-content: flex-start; }
     .sig-wrap, .photo-wrap { align-items: flex-start; }
-    .chat-panel { width: 100%; right: -100%; }
+    /* ===== T19 PART 2 — AI chat bottom sheet ===== */
+    .chat-panel {
+      left: 0 !important;
+      right: 0 !important;
+      top: auto !important;
+      bottom: -100vh;
+      width: 100% !important;
+      height: 85vh;
+      max-height: 85vh;
+      border-left: 0 !important;
+      border-top: 1px solid var(--border);
+      border-radius: 16px 16px 0 0;
+      transition: bottom 0.25s ease;
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.4);
+    }
+    .chat-panel.open { bottom: 0 !important; right: 0 !important; }
     .chat-fab { right: 16px; bottom: 16px; }
+    /* ===== end T19 PART 2 AI chat bottom sheet ===== */
+
+    /* ===== T19 PART 3 — touch targets ===== */
+    .btn,
+    .btn-icon,
+    .wo-tab,
+    .nav-item,
+    .mobile-menu-btn,
+    .wo-search-clear,
+    .btn-clear-search,
+    .chat-fab {
+      min-height: 44px;
+    }
+    .btn { padding: 10px 16px !important; }
+    .nav-item { padding: 12px !important; }
+    /* ===== end T19 PART 3 touch targets ===== */
   }
   .mobile-menu-btn {
     display: none;
@@ -552,6 +630,15 @@
     font-size: 22px;
     margin-right: 10px;
   }
+  /* ===== T19 PART 1 — sidebar backdrop base ===== */
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 110;
+  }
+  /* ===== end T19 PART 1 sidebar backdrop base ===== */
   /* Meta line spacing (used in WO list cards + detail header) */
 .wo-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
 .wo-meta span { display: inline-flex; align-items: center; }
@@ -802,6 +889,8 @@
 
 <!-- ============ APP SHELL ============ -->
 <div id="app">
+  <!-- T19: sidebar backdrop for mobile drawer -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
   <div class="app-grid">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">WorkOrder Pro</div>
@@ -1619,15 +1708,29 @@ async function bootAuth() {
     $('#view-procedures').style.display = v === 'procedures' ? '' : 'none';
     if (v === 'workorders') renderWorkOrders();
     else renderProcedures();
-    // Close mobile sidebar after navigation
+    // Close mobile sidebar after navigation — T19: also hide backdrop
     $('#sidebar').classList.remove('open');
+    const __bdNav = document.getElementById('sidebar-backdrop');
+    if (__bdNav) __bdNav.classList.remove('show');
   }
 
-  // Mobile menu (two buttons)
+  // Mobile menu (two buttons) — T19: also toggle backdrop visibility
+  function toggleMobileSidebar(forceState) {
+    const sb = $('#sidebar');
+    const bd = $('#sidebar-backdrop');
+    const willOpen = typeof forceState === 'boolean' ? forceState : !sb.classList.contains('open');
+    sb.classList.toggle('open', willOpen);
+    if (bd) bd.classList.toggle('show', willOpen);
+  }
   ['#menu-btn', '#menu-btn-2'].forEach(sel => {
     const b = $(sel);
-    if (b) b.addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+    if (b) b.addEventListener('click', () => toggleMobileSidebar());
   });
+  // T19: tap the backdrop to close the drawer
+  const __sbBackdrop = $('#sidebar-backdrop');
+  if (__sbBackdrop) {
+    __sbBackdrop.addEventListener('click', () => toggleMobileSidebar(false));
+  }
 
   async function refreshAll() {
     try {
