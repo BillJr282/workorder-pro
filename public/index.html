@@ -558,6 +558,51 @@
 .wo-desc { color: var(--text); margin: 6px 0 14px; white-space: pre-wrap; }
 .wo-ca.wo-card .wo-meta { margin-bottom: 6px; }
 
+  /* ━━━━━━━━━━ Ticket 20: WO list tabs ━━━━━━━━━━ */
+.wo-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin: 0 0 16px;
+  padding: 0 4px;
+}
+.wo-tab {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 16px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  margin-bottom: -1px;
+}
+.wo-tab:hover { color: var(--text); }
+.wo-tab.active {
+  color: var(--text);
+  border-bottom-color: #3b82f6;
+}
+.wo-tab-count {
+  background: var(--panel-2);
+  color: var(--muted);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 18px;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+.wo-tab.active .wo-tab-count {
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa;
+  border-color: rgba(59,130,246,0.35);
+}
+
   /* ━━━━━━━━━━ Ticket 21: Priority colors ━━━━━━━━━━ */
 .pill {
   display: inline-flex;
@@ -713,6 +758,11 @@
             <h2>Work Orders</h2>
           </div>
           <button class="btn" id="new-wo-btn">+ New Work Order</button>
+        </div>
+        <div class="wo-tabs" id="wo-tabs">
+          <button type="button" class="wo-tab active" data-tab="created">Created <span class="wo-tab-count" data-count="created">0</span></button>
+          <button type="button" class="wo-tab" data-tab="assigned">Assigned <span class="wo-tab-count" data-count="assigned">0</span></button>
+          <button type="button" class="wo-tab" data-tab="completed">Completed <span class="wo-tab-count" data-count="completed">0</span></button>
         </div>
         <div id="wo-list" class="card-grid"></div>
       </section>
@@ -1272,6 +1322,7 @@ const isAdmin = () => currentUser && currentUser.role === 'admin';
   // ===== State =====
   const state = {
     view: 'workorders',
+    activeWoTab: 'created',
     workorders: [],
     procedures: [],
     activeWO: null,
@@ -1688,21 +1739,46 @@ $('#wof-add-other').addEventListener('click', () => {
   renderWofOther();
   recomputeWofTotals();
 });
+  function woTabBucket(w) {
+    if ((w.status || 'open') === 'completed') return 'completed';
+    if (w.assignee && String(w.assignee).trim() !== '') return 'assigned';
+    return 'created';
+  }
+
   function renderWorkOrders() {
     const list = $('#wo-list');
     list.innerHTML = '';
-    if (!state.workorders.length) {
-      list.appendChild(el('div', { class: 'empty' }, 'No work orders yet. Click "+ New Work Order" to create one.'));
+    // Bucket all WOs first for counts
+    const buckets = { created: [], assigned: [], completed: [] };
+    state.workorders.forEach(w => { buckets[woTabBucket(w)].push(w); });
+    // Update count badges
+    Object.keys(buckets).forEach(k => {
+      const badge = document.querySelector(`.wo-tab-count[data-count="${k}"]`);
+      if (badge) badge.textContent = buckets[k].length;
+    });
+    // Update active-tab styling
+    document.querySelectorAll('.wo-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === state.activeWoTab);
+    });
+    // Render only the active bucket
+    const visible = buckets[state.activeWoTab] || [];
+    if (!visible.length) {
+      const emptyMsg = state.activeWoTab === 'created'
+        ? 'No created work orders. Click "+ New Work Order" to add one.'
+        : state.activeWoTab === 'assigned'
+        ? 'Nothing assigned yet.'
+        : 'No completed work orders.';
+      list.appendChild(el('div', { class: 'empty' }, emptyMsg));
       return;
     }
-    state.workorders.forEach(w => {
+    visible.forEach(w => {
       const card = el('div', { class: `card wo-card priority-${w.priority || 'medium'}`, onclick: () => openWorkOrder(w.id) },
         el('div', { class: 'wo-card-header' },
           el('div', { class: 'wo-title' }, w.title || '(untitled)'),
           el('span', { class: `pill priority-${w.priority || 'medium'}` }, w.priority || 'medium'),
         ),
         el('div', { class: 'wo-meta' },
-          el('span', {}, `Status: ${w.status || 'open'}`),
+          el('span', {}, `Status: ${(w.status || 'open').replace('_', ' ')}`),
           el('span', {}, `Assignee: ${w.assignee || '—'}`),
           el('span', {}, `Created: ${fmtDate(w.createdAt)}`),
         ),
@@ -1828,13 +1904,36 @@ function openWoForm(wo) {
   // ---- Header meta ----
   const metaBits = [
     el('span', { class: `pill priority-${wo.priority || 'medium'}` }, wo.priority || 'medium'),
-    el('span', {}, `Status: ${wo.status || 'open'}`),
+    el('span', {}, `Status: ${(wo.status || 'open').replace('_', ' ')}`),
     el('span', {}, `Assignee: ${wo.assignee || '—'}`),
     el('span', {}, `Created: ${fmtDate(wo.createdAt)}`),
   ];
+  if (wo.assignedAt) metaBits.push(el('span', {}, `Assigned: ${fmtDate(wo.assignedAt)}`));
+  if (wo.startedAt) metaBits.push(el('span', {}, `Started: ${fmtDate(wo.startedAt)}`));
+  if (wo.completedAt) metaBits.push(el('span', {}, `Completed: ${fmtDate(wo.completedAt)}`));
   if (wo.workType) metaBits.push(el('span', {}, `Type: ${wo.workType}`));
   if (wo.customerName) metaBits.push(el('span', {}, `Customer: ${wo.customerName}`));
   body.appendChild(el('div', { class: 'wo-meta' }, ...metaBits));
+
+  // Lifecycle action buttons (context-aware)
+  const status = wo.status || 'open';
+  const actionBar = el('div', { class: 'wo-actions', style: 'display:flex; gap:8px; margin: 8px 0 14px;' });
+  if (status === 'open') {
+    const btn = el('button', { class: 'btn', id: 'wod-start', type: 'button' }, '▶ Start Work');
+    actionBar.appendChild(btn);
+    btn.addEventListener('click', () => changeWoStatus('in_progress'));
+  }
+  if (status === 'in_progress') {
+    const btn = el('button', { class: 'btn', id: 'wod-complete', type: 'button' }, '✓ Mark Complete');
+    actionBar.appendChild(btn);
+    btn.addEventListener('click', () => changeWoStatus('completed'));
+  }
+  if (status === 'completed') {
+    const btn = el('button', { class: 'btn btn-secondary', id: 'wod-reopen', type: 'button' }, '↺ Reopen');
+    actionBar.appendChild(btn);
+    btn.addEventListener('click', () => changeWoStatus('in_progress'));
+  }
+  if (actionBar.children.length) body.appendChild(actionBar);
 
   if (wo.description) body.appendChild(el('p', { class: 'wo-desc' }, wo.description));
 
@@ -1984,6 +2083,28 @@ function openWoForm(wo) {
       await refreshAll();
     } catch (err) { alert('Delete failed: ' + err.message); }
   });
+
+  // ━━━━━━━━━━ Ticket 20: tab clicks + lifecycle helper ━━━━━━━━━━
+  document.querySelectorAll('.wo-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.activeWoTab = btn.dataset.tab;
+      renderWorkOrders();
+    });
+  });
+
+  async function changeWoStatus(newStatus) {
+    if (!state.activeWO) return;
+    const wo = state.activeWO;
+    try {
+      const updated = await apiFetch(`/api/workorders/${wo.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: newStatus }),
+      });
+      state.activeWO = updated;
+      renderWorkOrderDetail();
+      await refreshAll();
+    } catch (err) { alert('Status change failed: ' + err.message); }
+  }
 
   // ===== Procedures list =====
   function renderProcedures() {
