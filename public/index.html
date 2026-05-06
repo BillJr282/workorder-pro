@@ -921,6 +921,7 @@
     <div class="modal-body" id="wod-body"></div>
     <div class="modal-footer">
       <button class="btn btn-danger" id="wod-delete">Delete</button>
+      <button class="btn btn-secondary" id="wod-print">🖨 Print / PDF</button>
       <button class="btn btn-secondary" data-close="wo-detail-modal">Close</button>
       <button class="btn" id="wod-edit">Edit</button>
     </div>
@@ -1875,6 +1876,12 @@ function openWoForm(wo) {
     const wo = state.activeWO;
     closeModal('wo-detail-modal');
     openWoForm(wo);
+  });
+  // Ticket 13: Print / Save as PDF
+  $('#wod-print').addEventListener('click', () => {
+    if (!state.activeWO) return;
+    const wo = state.activeWO;
+    window.open('/api/workorders/' + encodeURIComponent(wo.id) + '/print', '_blank', 'noopener');
   });
   $('#wod-delete').addEventListener('click', async () => {
     if (!state.activeWO) return;
