@@ -4,23 +4,23 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>WorkOrder Pro</title>
+<title>WM Service</title>
 <style>
   :root {
-    --bg: #0f172a;
-    --panel: #1e293b;
-    --panel-2: #273449;
-    --border: #334155;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
+    --bg: #f5f7fa;
+    --panel: #ffffff;
+    --panel-2: #f3f4f6;
+    --border: #e5e7eb;
+    --text: #1f2937;
+    --muted: #6b7280;
     --accent: #3b82f6;
     --accent-hover: #2563eb;
-    --success: #22c55e;
-    --warn: #f59e0b;
-    --danger: #ef4444;
+    --success: #16a34a;
+    --warn: #d97706;
+    --danger: #dc2626;
     --pass: #16a34a;
     --fail: #dc2626;
-    --ai: #8b5cf6;
+    --ai: #7c3aed;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; height: 100%; }
@@ -135,6 +135,16 @@
     border-bottom: 1px solid var(--border);
     font-weight: 600;
     font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+  }
+  .sidebar-logo {
+    height: 36px;
+    width: auto;
+    max-width: 100%;
+    display: block;
   }
   .nav { flex: 1; padding: 8px; }
   .nav-item {
