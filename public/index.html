@@ -1754,12 +1754,13 @@ function openWoForm(wo) {
       quantity: numOrZero(p.quantity),
       unitCost: numOrZero(p.unitCost),
     })),
-    labor: woFormEdit.labor.map(l => ({
+   labor: woFormEdit.labor.map(l => ({
       id: l.id,
       technician: l.technician || '',
       date: l.date || '',
       hours: numOrZero(l.hours),
       hourlyRate: numOrZero(l.hourlyRate),
+      notes: l.notes || '',
     })),
     otherCosts: woFormEdit.otherCosts.map(o => ({
       id: o.id,
