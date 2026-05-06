@@ -1317,7 +1317,7 @@ const TOOLS = [
       properties: {
         title: { type: "string", description: "Short title for the work order" },
         description: { type: "string", description: "Detailed description of the work needed" },
-        status: { type: "string", enum: ["open", "in_progress", "complete"], description: "Defaults to 'open'" },
+        status: { type: "string", enum: ["open", "in_progress", "completed"], description: "Defaults to 'open'" },
         priority: { type: "string", enum: ["low", "medium", "high", "urgent"], description: "Defaults to 'medium'" },
         assignee: { type: "string", description: "Person assigned. Optional." },
         customerName: { type: "string", description: "Free-text customer name. Optional." },
@@ -1339,28 +1339,29 @@ const TOOLS = [
     },
     run: (input) => {
       const data = loadData();
+      if (!input || !input.title) throw new Error("title is required");
       const wo = {
-    id: uuidv4(),
-    title,
-    description: description || "",
-    status: status || "open",
-    priority: priority || "medium",
-    assignee: assignee || "",
-    customerName: "",
-    workType: "",
-    asset: normalizeAsset({}),
-    parts: [],
-    labor: [],
-    otherCosts: [],
-    totals: { parts: 0, labor: 0, other: 0, grand: 0 },
-    procedures: [],
-    activity: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    assignedAt: assignee ? new Date().toISOString() : null,
-    startedAt: null,
-    completedAt: null,
-  };
+        id: uuidv4(),
+        title: input.title,
+        description: input.description || "",
+        status: input.status || "open",
+        priority: input.priority || "medium",
+        assignee: input.assignee || "",
+        customerName: "",
+        workType: "",
+        asset: normalizeAsset({}),
+        parts: [],
+        labor: [],
+        otherCosts: [],
+        totals: { parts: 0, labor: 0, other: 0, grand: 0 },
+        procedures: [],
+        activity: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        assignedAt: input.assignee ? new Date().toISOString() : null,
+        startedAt: null,
+        completedAt: null,
+      };
       applyWorkOrderUpdates(wo, input);
       logActivity(wo, `Work order created via AI assistant: ${wo.title}`);
       data.workorders.push(wo);
@@ -1377,7 +1378,7 @@ const TOOLS = [
         id: { type: "string" },
         title: { type: "string" },
         description: { type: "string" },
-        status: { type: "string", enum: ["open", "in_progress", "complete"] },
+        status: { type: "string", enum: ["open", "in_progress", "completed"] },
         priority: { type: "string", enum: ["low", "medium", "high", "urgent"] },
         assignee: { type: "string" },
         customerName: { type: "string" },
