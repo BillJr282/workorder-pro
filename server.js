@@ -521,7 +521,7 @@ function renderWorkOrderPrintHtml(wo) {
   h1 { margin: 0; font-size: 22px; }
   h2 { font-size: 13px; margin: 16px 0 6px 0; padding-bottom: 4px; border-bottom: 1.5px solid #111; text-transform: uppercase; letter-spacing: 0.5px; }
   .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #111; padding-bottom: 12px; margin-bottom: 16px; }
-  .brand { font-weight: bold; font-size: 18px; }
+  .brand-logo { height: 36px; width: auto; display: block; margin-bottom: 4px; }
   .wo-meta { text-align: right; font-size: 11px; }
   .wo-meta .wo-num { font-size: 16px; font-weight: bold; margin-bottom: 2px; }
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 8px; }
@@ -556,7 +556,7 @@ function renderWorkOrderPrintHtml(wo) {
 </div>
 <div class="header">
   <div>
-    <div class="brand">WorkOrder Pro</div>
+   <img class="brand-logo" src="/wordmark.svg" alt="WM Service">
     <div style="font-size:10px; color:#555;">Maintenance Management</div>
   </div>
   <div class="wo-meta">
@@ -633,7 +633,7 @@ ${photosHtml}
   <div class="sig-line">Customer Signature / Date</div>
 </div>
 
-<div class="footer-meta">WorkOrder Pro · WO-${escHtml(woNumber)} · Generated ${escHtml(new Date().toLocaleString())}</div>
+<div class="footer-meta">WM Service · WO-${escHtml(woNumber)} · Generated ${escHtml(new Date().toLocaleString())}</div>
 </body>
 </html>`;
 }
