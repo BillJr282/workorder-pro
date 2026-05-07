@@ -400,7 +400,7 @@ app.put("/api/workorders/:id", (req, res) => {
   if (!wo) return res.status(404).json({ error: "Not found" });
   const body = req.body || {};
   const { title, description, status, priority, assignee } = body;
-  const allowedStatuses = ["open", "in_progress", "completed"];
+  const allowedStatuses = ["open", "in_progress", "completed", "invoiced"];
   if (title !== undefined) wo.title = title;
   if (description !== undefined) wo.description = description;
   if (status !== undefined && status !== wo.status) {
@@ -414,7 +414,18 @@ app.put("/api/workorders/:id", (req, res) => {
     const nowIso = new Date().toISOString();
     if (status === "in_progress" && !wo.startedAt) wo.startedAt = nowIso;
     if (status === "completed") wo.completedAt = nowIso;
-    if (prevStatus === "completed" && status !== "completed") wo.completedAt = null;
+    if (prevStatus === "completed" && status !== "completed" && status !== "invoiced") wo.completedAt = null;
+    // ===== T20: Invoiced status =====
+    if (status === "invoiced") {
+      if (prevStatus !== "completed") {
+        return res.status(400).json({ error: "Invoiced is only allowed from Completed" });
+      }
+      wo.invoicedAt = nowIso;
+    }
+    if (prevStatus === "invoiced" && status !== "invoiced") {
+      wo.invoicedAt = null;
+    }
+    // ===== T20 END =====
   }
   if (priority !== undefined) wo.priority = priority;
   if (assignee !== undefined) {
