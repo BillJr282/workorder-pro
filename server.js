@@ -365,14 +365,16 @@ app.get("/api/workorders/:id", (req, res) => {
 
 app.post("/api/workorders", (req, res) => {
   const data = loadData();
-  const body = req.body || {};
-  const { title, description, status, priority, assignee } = body;
+ const body = req.body || {};
+  const { title, description, status, priority, assignee, scheduledStart, scheduledEnd } = body;
   if (!title) return res.status(400).json({ error: "title required" });
   const wo = {
     id: uuidv4(),
     title,
     description: description || "",
     status: status || "open",
+    scheduledStart: scheduledStart || null,
+    scheduledEnd: scheduledEnd || null,
     priority: priority || "medium",
     assignee: assignee || "",
     customerName: "",
@@ -399,10 +401,12 @@ app.put("/api/workorders/:id", (req, res) => {
   const wo = data.workorders.find((w) => w.id === req.params.id);
   if (!wo) return res.status(404).json({ error: "Not found" });
   const body = req.body || {};
-  const { title, description, status, priority, assignee } = body;
+  const { title, description, status, priority, assignee, scheduledStart, scheduledEnd } = body;
   const allowedStatuses = ["open", "in_progress", "completed", "invoiced"];
   if (title !== undefined) wo.title = title;
   if (description !== undefined) wo.description = description;
+  if (scheduledStart !== undefined) wo.scheduledStart = scheduledStart || null;
+  if (scheduledEnd !== undefined) wo.scheduledEnd = scheduledEnd || null;
   if (status !== undefined && status !== wo.status) {
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ error: `Invalid status. Allowed: ${allowedStatuses.join(", ")}` });
