@@ -1105,6 +1105,15 @@
   <label>Assignee</label>
   <input id="wof-assignee" type="text" />
 </div>
+<!-- ============ T21: Scheduling ============ -->
+<div class="field-row">
+  <label>Scheduled Start</label>
+  <input id="wof-scheduled-start" type="datetime-local" />
+</div>
+<div class="field-row">
+  <label>Scheduled End</label>
+  <input id="wof-scheduled-end" type="datetime-local" />
+</div>
 
 <!-- ============ Ticket 11: Customer / Asset (FK dropdowns) ============ -->
 <div class="field-row">
@@ -2092,6 +2101,8 @@ function openWoForm(wo) {
   $('#wof-status').value = wo ? (wo.status || 'open') : 'open';
   $('#wof-priority').value = wo ? (wo.priority || 'medium') : 'medium';
   $('#wof-assignee').value = wo ? (wo.assignee || '') : '';
+  $('#wof-scheduled-start').value = wo && wo.scheduledStart ? wo.scheduledStart.slice(0, 16) : '';
+  $('#wof-scheduled-end').value = wo && wo.scheduledEnd ? wo.scheduledEnd.slice(0, 16) : '';
 
   // ---- Ticket 11: customer / asset FK dropdowns ----
   $('#wof-work-type').value = wo ? (wo.workType || '') : '';
@@ -2138,6 +2149,8 @@ function openWoForm(wo) {
     status: $('#wof-status').value,
     priority: $('#wof-priority').value,
     assignee: $('#wof-assignee').value.trim(),
+    scheduledStart: $('#wof-scheduled-start').value ? new Date($('#wof-scheduled-start').value).toISOString() : null,
+    scheduledEnd: $('#wof-scheduled-end').value ? new Date($('#wof-scheduled-end').value).toISOString() : null,
     // Ticket 11: FK references (server snapshots customerName + asset object)
     customerId,
     assetId,
@@ -2206,6 +2219,22 @@ function openWoForm(wo) {
   if (wo.assignedAt) metaBits.push(el('span', {}, `Assigned: ${fmtDate(wo.assignedAt)}`));
   if (wo.startedAt) metaBits.push(el('span', {}, `Started: ${fmtDate(wo.startedAt)}`));
   if (wo.completedAt) metaBits.push(el('span', {}, `Completed: ${fmtDate(wo.completedAt)}`));
+  if (wo.invoicedAt) metaBits.push(el('span', {}, `Invoiced: ${fmtDate(wo.invoicedAt)}`));
+  if (wo.scheduledStart) metaBits.push(el('span', {}, `Scheduled Start: ${fmtDate(wo.scheduledStart)}`));
+  if (wo.scheduledEnd) metaBits.push(el('span', {}, `Scheduled End: ${fmtDate(wo.scheduledEnd)}`));
+  // ===== T21: Age metrics =====
+  (function () {
+    const MS_PER_DAY = 86400000;
+    const created = wo.createdAt ? new Date(wo.createdAt) : null;
+    const completed = wo.completedAt ? new Date(wo.completedAt) : null;
+    if (created) {
+      const endRef = completed || new Date();
+      const days = Math.max(0, Math.floor((endRef - created) / MS_PER_DAY));
+      const label = completed ? `Days to complete: ${days}` : `Days since created: ${days}`;
+      metaBits.push(el('span', { style: 'font-weight:600' }, label));
+    }
+  })();
+  // ===== T21 END =====
   if (wo.workType) metaBits.push(el('span', {}, `Type: ${wo.workType}`));
   if (wo.customerName) metaBits.push(el('span', {}, `Customer: ${wo.customerName}`));
   body.appendChild(el('div', { class: 'wo-meta' }, ...metaBits));
