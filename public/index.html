@@ -230,6 +230,7 @@
   }
   .badge-open { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
   .badge-in_progress { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+  .badge-invoiced { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
   .badge-complete { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
   .badge-low { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
   .badge-medium { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
@@ -995,6 +996,7 @@
           <button type="button" class="wo-tab active" data-tab="created">Created <span class="wo-tab-count" data-count="created">0</span></button>
           <button type="button" class="wo-tab" data-tab="assigned">Assigned <span class="wo-tab-count" data-count="assigned">0</span></button>
           <button type="button" class="wo-tab" data-tab="completed">Completed <span class="wo-tab-count" data-count="completed">0</span></button>
+          <button type="button" class="wo-tab" data-tab="invoiced">Invoiced <span class="wo-tab-count" data-count="invoiced">0</span></button>
         </div>
         <div id="wo-list" class="card-grid"></div>
       </section>
@@ -1986,6 +1988,7 @@ $('#wof-add-other').addEventListener('click', () => {
   recomputeWofTotals();
 });
   function woTabBucket(w) {
+    if ((w.status || 'open') === 'invoiced') return 'invoiced';
     if ((w.status || 'open') === 'completed') return 'completed';
     if (w.assignee && String(w.assignee).trim() !== '') return 'assigned';
     return 'created';
@@ -2027,7 +2030,7 @@ $('#wof-add-other').addEventListener('click', () => {
     const list = $('#wo-list');
     list.innerHTML = '';
     // Bucket all WOs first for counts
-    const buckets = { created: [], assigned: [], completed: [] };
+    const buckets = { created: [], assigned: [], completed: [], invoiced: [] };
     state.workorders.forEach(w => { buckets[woTabBucket(w)].push(w); });
     // Update count badges
     Object.keys(buckets).forEach(k => {
@@ -2224,6 +2227,14 @@ function openWoForm(wo) {
     const btn = el('button', { class: 'btn btn-secondary', id: 'wod-reopen', type: 'button' }, '↺ Reopen');
     actionBar.appendChild(btn);
     btn.addEventListener('click', () => changeWoStatus('in_progress'));
+    const invBtn = el('button', { class: 'btn', id: 'wod-invoice', type: 'button' }, '📄 Mark Invoiced');
+    actionBar.appendChild(invBtn);
+    invBtn.addEventListener('click', () => changeWoStatus('invoiced'));
+  }
+  if (status === 'invoiced') {
+    const btn = el('button', { class: 'btn btn-secondary', id: 'wod-uninvoice', type: 'button' }, '↺ Back to Completed');
+    actionBar.appendChild(btn);
+    btn.addEventListener('click', () => changeWoStatus('completed'));
   }
   if (actionBar.children.length) body.appendChild(actionBar);
 
