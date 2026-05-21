@@ -516,6 +516,10 @@ function renderWorkOrderPrintHtml(wo) {
       });
     }
   });
+  // Asset photos (T-photos): included on PDF. Parts/Other photos are internal-only and excluded.
+  (wo.assetPhotos || []).forEach((p) => {
+    photos.push({ caption: p.caption || "", src: `/api/workorders/${wo.id}/photos/${p.id}` });
+  });
 
   const created = wo.createdAt ? new Date(wo.createdAt).toLocaleString() : "";
   const updated = wo.updatedAt ? new Date(wo.updatedAt).toLocaleString() : "";
