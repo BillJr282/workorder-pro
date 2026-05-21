@@ -865,6 +865,20 @@
   .li-table tbody td { display: block; padding: 2px 0; }
   .li-table tbody tr { display: block; padding: 8px 0; border-bottom: 1px solid var(--border); }
   .li-table .li-line-total { text-align: left; padding-right: 0; }
+  .li-table tbody td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    margin-top: 4px;
+    margin-bottom: 2px;
+    font-weight: 500;
+  }
+  .li-table tbody td[data-label=""]::before { display: none; }
+  .li-table tbody td input,
+  .li-table tbody td select { width: 100%; box-sizing: border-box; }
 }
 </style>
 </head>
@@ -1935,8 +1949,20 @@ function renderWofLaborRows() {
     hoursInp.value = l.hours || '';
     bindRowInput(hoursInp, l, 'hours', { numeric: true, recalc: true });
 
-    const rateInp = el('input', { type: 'number', step: '0.01', min: '0' });
-    rateInp.value = l.hourlyRate || '';
+    const rateInp = document.createElement('select');
+    rateInp.className = 'li-rate-select';
+    const LABOR_RATES = [
+      { label: 'Field', rate: 165 },
+      { label: 'Shop',  rate: 145 },
+      { label: 'Fire',  rate: 138 },
+      { label: 'Lube',  rate: 138 }
+    ];
+    let rateHtml = '<option value="">— select —</option>';
+    LABOR_RATES.forEach(o => {
+      const sel = (Number(l.hourlyRate) === o.rate) ? ' selected' : '';
+      rateHtml += '<option value="' + o.rate + '"' + sel + '>' + o.label + ' ($' + o.rate + '/h)</option>';
+    });
+    rateInp.innerHTML = rateHtml;
     bindRowInput(rateInp, l, 'hourlyRate', { numeric: true, recalc: true });
 
     const notesInp = el('input', { type: 'text' });
@@ -1952,13 +1978,14 @@ function renderWofLaborRows() {
       recomputeWofTotals();
     } }, '✕');
 
-    tr.appendChild(el('td', {}, techNode));
-    tr.appendChild(el('td', {}, dateInp));
-    tr.appendChild(el('td', { class: 'li-num' }, hoursInp));
-    tr.appendChild(el('td', { class: 'li-num' }, rateInp));
-    tr.appendChild(el('td', {}, notesInp));
+    tr.appendChild(el('td', { 'data-label': 'Technician' }, techNode));
+    tr.appendChild(el('td', { 'data-label': 'Date' }, dateInp));
+    tr.appendChild(el('td', { class: 'li-num', 'data-label': 'Hours' }, hoursInp));
+    tr.appendChild(el('td', { class: 'li-num', 'data-label': 'Labour Rate' }, rateInp));
+    tr.appendChild(el('td', { 'data-label': 'Notes' }, notesInp));
+    ltCell.setAttribute('data-label', 'Line Total');
     tr.appendChild(ltCell);
-    tr.appendChild(el('td', {}, removeBtn));
+    tr.appendChild(el('td', { 'data-label': '' }, removeBtn));
     tbody.appendChild(tr);
   });
 }
