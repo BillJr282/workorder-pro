@@ -2157,7 +2157,7 @@ app.post("/api/workorders/:id/photos/:section", photoUpload.single("photo"), asy
     if (!PHOTO_SECTIONS.includes(section)) return res.status(400).json({ error: "invalid section" });
     if (!req.file) return res.status(400).json({ error: "no file" });
     const db = loadData();
-    const wo = (db.workOrders || []).find(w => w.id === id);
+    const wo = (db.workorders || []).find(w => w.id === id);
     if (!wo) return res.status(404).json({ error: "work order not found" });
 
     // Downscale: longest edge 1600px, JPEG quality 80, EXIF stripped (rotate() applies EXIF orientation then drops metadata).
@@ -2218,7 +2218,7 @@ app.delete("/api/workorders/:id/photos/:section/:photoId", (req, res) => {
     const { id, section, photoId } = req.params;
     if (!PHOTO_SECTIONS.includes(section)) return res.status(400).json({ error: "invalid section" });
     const db = loadData();
-    const wo = (db.workOrders || []).find(w => w.id === id);
+    const wo = (db.workorders || []).find(w => w.id === id);
     if (!wo) return res.status(404).json({ error: "work order not found" });
     const bucket = photoBucketKey(section);
     const arr = Array.isArray(wo[bucket]) ? wo[bucket] : [];
@@ -2242,7 +2242,7 @@ app.patch("/api/workorders/:id/photos/:section/:photoId", (req, res) => {
     const { id, section, photoId } = req.params;
     if (!PHOTO_SECTIONS.includes(section)) return res.status(400).json({ error: "invalid section" });
     const db = loadData();
-    const wo = (db.workOrders || []).find(w => w.id === id);
+    const wo = (db.workorders || []).find(w => w.id === id);
     if (!wo) return res.status(404).json({ error: "work order not found" });
     const bucket = photoBucketKey(section);
     const arr = Array.isArray(wo[bucket]) ? wo[bucket] : [];
