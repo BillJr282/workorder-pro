@@ -12,12 +12,36 @@ const crypto = require("crypto");
 const { v4: uuidv4 } = require("uuid");
 const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
+const multer = require("multer");
+const sharp = require("sharp");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
+
+// ===== Photo storage (T-photos) =====
+// Photos live on the persistent volume alongside data.json.
+// DATA_DIR is configured to /data via Railway env var; falls back to __dirname for local dev.
+// We don't try to use DATA_DIR before it's been declared below — so PHOTOS_DIR is set lazily on first use.
+let PHOTOS_DIR_CACHED = null;
+function getPhotosDir() {
+  if (PHOTOS_DIR_CACHED) return PHOTOS_DIR_CACHED;
+  PHOTOS_DIR_CACHED = path.join(DATA_DIR, "photos");
+  try { fs.mkdirSync(PHOTOS_DIR_CACHED, { recursive: true }); } catch (_) {}
+  console.log(`[photos] PHOTOS_DIR = ${PHOTOS_DIR_CACHED}`);
+  return PHOTOS_DIR_CACHED;
+}
+// Multer: memory storage so sharp can process the buffer before writing.
+const photoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB raw upload cap (pre-downscale)
+  fileFilter: (req, file, cb) => {
+    if (!/^image\//i.test(file.mimetype)) return cb(new Error("Only image uploads are allowed"));
+    cb(null, true);
+  }
+});
 // ===== TICKET 10 PART 1 END (block A) =====
 
 // ---------- Data layer ----------
@@ -2116,7 +2140,125 @@ app.delete("/api/users/:id", requireAdmin, (req, res) => {
 });
 
 // ===== TICKET 10 PART 3 END =====
-// ---------- Static files (must come AFTER API routes) ----------
+// ========== Photo routes (T-photos) ==========
+// Photo sections: "parts" | "other" | "asset"
+const PHOTO_SECTIONS = ["parts", "other", "asset"];
+function photoBucketKey(section) {
+  if (section === "parts") return "partsPhotos";
+  if (section === "other") return "otherPhotos";
+  if (section === "asset") return "assetPhotos";
+  return null;
+}
+
+// POST /api/workorders/:id/photos/:section — upload a photo to a section
+app.post("/api/workorders/:id/photos/:section", photoUpload.single("photo"), async (req, res) => {
+  try {
+    const { id, section } = req.params;
+    if (!PHOTO_SECTIONS.includes(section)) return res.status(400).json({ error: "invalid section" });
+    if (!req.file) return res.status(400).json({ error: "no file" });
+    const db = loadData();
+    const wo = (db.workOrders || []).find(w => w.id === id);
+    if (!wo) return res.status(404).json({ error: "work order not found" });
+
+    // Downscale: longest edge 1600px, JPEG quality 80, EXIF stripped (rotate() applies EXIF orientation then drops metadata).
+    const processedBuf = await sharp(req.file.buffer)
+      .rotate()
+      .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 80, mozjpeg: true })
+      .toBuffer();
+
+    const photoId = "p_" + crypto.randomBytes(6).toString("hex");
+    const filename = photoId + ".jpg";
+    const woDir = path.join(getPhotosDir(), id);
+    try { fs.mkdirSync(woDir, { recursive: true }); } catch (_) {}
+    fs.writeFileSync(path.join(woDir, filename), processedBuf);
+
+    const bucket = photoBucketKey(section);
+    if (!Array.isArray(wo[bucket])) wo[bucket] = [];
+    const meta = {
+      id: photoId,
+      filename,
+      caption: (req.body && typeof req.body.caption === "string") ? req.body.caption.slice(0, 280) : "",
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: (req.user && req.user.username) || null,
+      size: processedBuf.length
+    };
+    wo[bucket].push(meta);
+    wo.updatedAt = new Date().toISOString();
+    saveData(db);
+    res.json({ ok: true, photo: meta });
+  } catch (e) {
+    console.error("[photo upload] ", e);
+    res.status(500).json({ error: e.message || "upload failed" });
+  }
+});
+
+// GET /api/workorders/:id/photos/:photoId — serve a photo file
+app.get("/api/workorders/:id/photos/:photoId", (req, res) => {
+  try {
+    const { id, photoId } = req.params;
+    // photoId may include or omit the .jpg suffix
+    const filename = /\.jpg$/i.test(photoId) ? photoId : (photoId + ".jpg");
+    // basic path-traversal guard
+    if (!/^p_[a-f0-9]+\.jpg$/i.test(filename)) return res.status(400).end();
+    const filePath = path.join(getPhotosDir(), id, filename);
+    if (!fs.existsSync(filePath)) return res.status(404).end();
+    res.setHeader("Content-Type", "image/jpeg");
+    res.setHeader("Cache-Control", "private, max-age=3600");
+    fs.createReadStream(filePath).pipe(res);
+  } catch (e) {
+    console.error("[photo serve] ", e);
+    res.status(500).end();
+  }
+});
+
+// DELETE /api/workorders/:id/photos/:section/:photoId — remove a photo
+app.delete("/api/workorders/:id/photos/:section/:photoId", (req, res) => {
+  try {
+    const { id, section, photoId } = req.params;
+    if (!PHOTO_SECTIONS.includes(section)) return res.status(400).json({ error: "invalid section" });
+    const db = loadData();
+    const wo = (db.workOrders || []).find(w => w.id === id);
+    if (!wo) return res.status(404).json({ error: "work order not found" });
+    const bucket = photoBucketKey(section);
+    const arr = Array.isArray(wo[bucket]) ? wo[bucket] : [];
+    const idx = arr.findIndex(p => p.id === photoId);
+    if (idx === -1) return res.status(404).json({ error: "photo not found" });
+    const [removed] = arr.splice(idx, 1);
+    wo.updatedAt = new Date().toISOString();
+    saveData(db);
+    // Best-effort file delete; ignore failures (data is the source of truth).
+    try { fs.unlinkSync(path.join(getPhotosDir(), id, removed.filename)); } catch (_) {}
+    res.json({ ok: true, removed: photoId });
+  } catch (e) {
+    console.error("[photo delete] ", e);
+    res.status(500).json({ error: e.message || "delete failed" });
+  }
+});
+
+// PATCH /api/workorders/:id/photos/:section/:photoId — update caption
+app.patch("/api/workorders/:id/photos/:section/:photoId", (req, res) => {
+  try {
+    const { id, section, photoId } = req.params;
+    if (!PHOTO_SECTIONS.includes(section)) return res.status(400).json({ error: "invalid section" });
+    const db = loadData();
+    const wo = (db.workOrders || []).find(w => w.id === id);
+    if (!wo) return res.status(404).json({ error: "work order not found" });
+    const bucket = photoBucketKey(section);
+    const arr = Array.isArray(wo[bucket]) ? wo[bucket] : [];
+    const p = arr.find(x => x.id === photoId);
+    if (!p) return res.status(404).json({ error: "photo not found" });
+    if (typeof req.body.caption === "string") p.caption = req.body.caption.slice(0, 280);
+    wo.updatedAt = new Date().toISOString();
+    saveData(db);
+    res.json({ ok: true, photo: p });
+  } catch (e) {
+    console.error("[photo patch] ", e);
+    res.status(500).json({ error: e.message || "patch failed" });
+  }
+});
+
+// ========== Static files (must come AFTER API routes) ----------
 app.use(express.static(path.join(__dirname, "public")));
 
 // ---------- Start ----------
