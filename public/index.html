@@ -879,6 +879,13 @@
   .li-table tbody td[data-label=""]::before { display: none; }
   .li-table tbody td input,
   .li-table tbody td select { width: 100%; box-sizing: border-box; }
+  /* Prevent iOS Safari from auto-zooming into form fields on focus */
+  input, select, textarea { font-size: 16px !important; }
+  .li-table tbody td input,
+  .li-table tbody td select,
+  .pb-field-row input,
+  .pb-field-row select,
+  .wo-search-input { font-size: 16px !important; }
 }
 </style>
 </head>
