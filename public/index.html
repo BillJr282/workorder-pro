@@ -887,6 +887,27 @@
   .pb-field-row select,
   .wo-search-input { font-size: 16px !important; }
 }
+/* ===== Photo block (T-photos) ===== */
+.photo-block { margin-top: 8px; }
+.photo-block + .photo-block { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+.photo-subhead { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.photo-subhead h5 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
+.photo-note { font-size: 11px; color: var(--muted); font-style: italic; }
+.photo-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 8px; }
+@media (min-width: 720px) { .photo-grid { grid-template-columns: repeat(4, 1fr); } }
+.photo-cell { position: relative; background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 6px; }
+.photo-thumb { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 4px; cursor: zoom-in; display: block; background: #000; }
+.photo-caption { width: 100%; box-sizing: border-box; margin-top: 6px; padding: 4px 6px; font-size: 12px; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 4px; transition: border-color 0.4s; }
+.photo-caption.saved { border-color: #10b981; }
+.photo-del { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border: none; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; cursor: pointer; font-size: 16px; line-height: 1; padding: 0; }
+.photo-del:hover { background: rgba(220,38,38,0.9); }
+.photo-add-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.photo-progress { flex: 1; min-width: 120px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.photo-progress-bar { height: 100%; width: 0%; background: var(--accent); transition: width 0.2s; }
+.photo-progress-label { font-size: 11px; color: var(--muted); }
+.photo-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; cursor: zoom-out; }
+.photo-lightbox img { max-width: 100%; max-height: 90vh; object-fit: contain; }
+.photo-lightbox-cap { color: #fff; margin-top: 12px; font-size: 14px; text-align: center; max-width: 720px; }
 </style>
 </head>
 <body>
@@ -2238,6 +2259,145 @@ function openWoForm(wo) {
     } catch (e) { alert('Open failed: ' + e.message); }
   }
 
+  // ===== Photo block (T-photos) =====
+  // Renders a thumbnail grid + "+ Add Photo" controls for a single photo section.
+  // section is "asset" | "parts" | "other"
+  function renderPhotoBlock(woId, section, photos, opts) {
+    opts = opts || {};
+    const wrap = el('div', { class: 'photo-block' });
+
+    // Subsection header with optional small badge
+    const head = el('div', { class: 'photo-subhead' });
+    head.appendChild(el('h5', {}, opts.title || section));
+    if (opts.note) head.appendChild(el('span', { class: 'photo-note' }, opts.note));
+    wrap.appendChild(head);
+
+    // Grid of thumbnails (re-rendered on change)
+    const grid = el('div', { class: 'photo-grid' });
+    wrap.appendChild(grid);
+
+    function rerenderGrid(list) {
+      grid.innerHTML = '';
+      (list || []).forEach(p => {
+        const cell = el('div', { class: 'photo-cell' });
+        const img = el('img', { class: 'photo-thumb', src: `/api/workorders/${woId}/photos/${p.id}`, alt: p.caption || '' });
+        img.addEventListener('click', () => openLightbox(`/api/workorders/${woId}/photos/${p.id}`, p.caption));
+        cell.appendChild(img);
+
+        const cap = el('input', { type: 'text', class: 'photo-caption', placeholder: 'Caption (optional)' });
+        cap.value = p.caption || '';
+        let capTimer = null;
+        cap.addEventListener('input', () => {
+          if (capTimer) clearTimeout(capTimer);
+          capTimer = setTimeout(async () => {
+            try {
+              await fetch(`/api/workorders/${woId}/photos/${section}/${p.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ caption: cap.value })
+              });
+              p.caption = cap.value;
+              cap.classList.add('saved');
+              setTimeout(() => cap.classList.remove('saved'), 800);
+            } catch (_) {}
+          }, 600);
+        });
+        cell.appendChild(cap);
+
+        const del = el('button', { type: 'button', class: 'photo-del', title: 'Delete photo' }, '×');
+        del.addEventListener('click', async () => {
+          if (!confirm('Delete this photo?')) return;
+          try {
+            const r = await fetch(`/api/workorders/${woId}/photos/${section}/${p.id}`, { method: 'DELETE' });
+            if (!r.ok) throw new Error(await r.text());
+            const idx = list.indexOf(p);
+            if (idx !== -1) list.splice(idx, 1);
+            rerenderGrid(list);
+          } catch (e) { alert('Delete failed: ' + e.message); }
+        });
+        cell.appendChild(del);
+
+        grid.appendChild(cell);
+      });
+    }
+    rerenderGrid(photos);
+
+    // Upload row with hidden file input + visible button + progress bar
+    const addRow = el('div', { class: 'photo-add-row' });
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.capture = 'environment';
+    fileInput.multiple = true;
+    fileInput.style.display = 'none';
+    const addBtn = el('button', { type: 'button', class: 'btn btn-secondary btn-sm' }, '+ Add Photo');
+    addBtn.addEventListener('click', () => fileInput.click());
+    const progress = el('div', { class: 'photo-progress', style: 'display:none;' });
+    const progressBar = el('div', { class: 'photo-progress-bar' });
+    progress.appendChild(progressBar);
+    const progressLabel = el('div', { class: 'photo-progress-label' }, '');
+
+    async function uploadOne(file, index, total) {
+      progress.style.display = 'block';
+      progressLabel.textContent = `Uploading ${index + 1} of ${total}…`;
+      progressBar.style.width = '0%';
+      return new Promise((resolve, reject) => {
+        const fd = new FormData();
+        fd.append('photo', file);
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `/api/workorders/${woId}/photos/${section}`);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) progressBar.style.width = ((e.loaded / e.total) * 100).toFixed(0) + '%';
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try { resolve(JSON.parse(xhr.responseText)); } catch (e) { reject(e); }
+          } else reject(new Error('HTTP ' + xhr.status + ': ' + xhr.responseText));
+        };
+        xhr.onerror = () => reject(new Error('network error'));
+        xhr.send(fd);
+      });
+    }
+    fileInput.addEventListener('change', async () => {
+      const files = Array.from(fileInput.files || []);
+      if (!files.length) return;
+      addBtn.disabled = true;
+      try {
+        for (let i = 0; i < files.length; i++) {
+          const result = await uploadOne(files[i], i, files.length);
+          if (result && result.photo) photos.push(result.photo);
+          rerenderGrid(photos);
+        }
+      } catch (e) { alert('Upload failed: ' + e.message); }
+      finally {
+        addBtn.disabled = false;
+        progress.style.display = 'none';
+        progressLabel.textContent = '';
+        fileInput.value = '';
+      }
+    });
+
+    addRow.appendChild(addBtn);
+    addRow.appendChild(fileInput);
+    addRow.appendChild(progressLabel);
+    addRow.appendChild(progress);
+    wrap.appendChild(addRow);
+    return wrap;
+  }
+
+  // Lightbox: simple full-screen image preview
+  function openLightbox(src, caption) {
+    const overlay = el('div', { class: 'photo-lightbox' });
+    overlay.appendChild(el('img', { src }));
+    if (caption) overlay.appendChild(el('div', { class: 'photo-lightbox-cap' }, caption));
+    const close = () => overlay.remove();
+    overlay.addEventListener('click', close);
+    document.addEventListener('keydown', function onKey(e) {
+      if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
+    });
+    document.body.appendChild(overlay);
+  }
+
   function renderWorkOrderDetail() {
   const wo = state.activeWO;
   if (!wo) return;
@@ -2411,6 +2571,16 @@ function openWoForm(wo) {
       el('div', { class: 'totals-row totals-grand' }, el('span', {}, 'Grand Total (CAD)'), el('span', {}, fmtCAD(totals.grand))),
     );
     body.appendChild(card);
+  }
+
+  // ---- Photos card (T-photos) ----
+  {
+    const photosCard = el('div', { class: 'wo-section' });
+    photosCard.appendChild(el('div', { class: 'wo-section-head' }, el('h4', {}, 'Photos')));
+    photosCard.appendChild(renderPhotoBlock(wo.id, 'asset', wo.assetPhotos = wo.assetPhotos || [], { title: 'Asset', note: '(included on PDF)' }));
+    photosCard.appendChild(renderPhotoBlock(wo.id, 'parts', wo.partsPhotos = wo.partsPhotos || [], { title: 'Parts', note: '(internal only)' }));
+    photosCard.appendChild(renderPhotoBlock(wo.id, 'other', wo.otherPhotos = wo.otherPhotos || [], { title: 'Other Costs', note: '(internal only)' }));
+    body.appendChild(photosCard);
   }
 
   // ---- Procedures (existing) ----
