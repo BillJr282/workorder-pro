@@ -1610,6 +1610,7 @@ const isAdmin = () => currentUser && currentUser.role === 'admin';
   const state = {
     view: 'workorders',
     activeWoTab: 'created',
+    openInvoicedFolders: new Set(),
     workorders: [],
     procedures: [],
     activeWO: null,
@@ -2132,22 +2133,63 @@ $('#wof-add-other').addEventListener('click', () => {
       }
       return;
     }
-    visible.forEach(w => {
-      const card = el('div', { class: `card wo-card priority-${w.priority || 'medium'}`, onclick: () => openWorkOrder(w.id) },
-        el('div', { class: 'wo-card-header' },
-          el('div', { class: 'wo-title' }, w.title || '(untitled)'),
-          el('span', { class: `pill priority-${w.priority || 'medium'}` }, w.priority || 'medium'),
-        ),
-        el('div', { class: 'wo-meta' },
-          el('span', {}, `Status: ${(w.status || 'open').replace('_', ' ')}`),
-          w.customerName ? el('span', {}, `Customer: ${w.customerName}`) : null,
-          el('span', {}, `Assignee: ${w.assignee || '—'}`),
-          el('span', {}, `Created: ${fmtDate(w.createdAt)}`),
-        ),
-        w.description ? el('div', { class: 'wo-desc' }, w.description) : null,
-      );
-      list.appendChild(card);
-    });
+    const renderWoCard = (w) => el('div', { class: `card wo-card priority-${w.priority || 'medium'}`, onclick: () => openWorkOrder(w.id) },
+      el('div', { class: 'wo-card-header' },
+        el('div', { class: 'wo-title' }, w.title || '(untitled)'),
+        el('span', { class: `pill priority-${w.priority || 'medium'}` }, w.priority || 'medium'),
+      ),
+      el('div', { class: 'wo-meta' },
+        el('span', {}, `Status: ${(w.status || 'open').replace('_', ' ')}`),
+        w.customerName ? el('span', {}, `Customer: ${w.customerName}`) : null,
+        el('span', {}, `Assignee: ${w.assignee || '—'}`),
+        el('span', {}, `Created: ${fmtDate(w.createdAt)}`),
+      ),
+      w.description ? el('div', { class: 'wo-desc' }, w.description) : null,
+    );
+    if (state.activeWoTab === 'invoiced') {
+      // Group invoiced WOs into customer folders
+      const groups = {};
+      visible.forEach(w => {
+        const key = w.customerName || '(Unassigned)';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(w);
+      });
+      const keys = Object.keys(groups).sort((a, b) => {
+        if (a === '(Unassigned)') return 1;
+        if (b === '(Unassigned)') return -1;
+        return a.localeCompare(b);
+      });
+      keys.forEach(name => {
+        const items = groups[name].slice().sort((a, b) => {
+          const ad = a.invoicedAt || a.createdAt || '';
+          const bd = b.invoicedAt || b.createdAt || '';
+          return bd.localeCompare(ad);
+        });
+        const isOpen = state.openInvoicedFolders.has(name);
+        const folder = el('div', { class: `cust-folder${isOpen ? ' open' : ''}` },
+          el('div', {
+            class: 'cust-folder-header',
+            onclick: () => {
+              if (state.openInvoicedFolders.has(name)) state.openInvoicedFolders.delete(name);
+              else state.openInvoicedFolders.add(name);
+              renderWorkOrders();
+            },
+          },
+            el('span', { class: 'cust-folder-chev' }, '▶'),
+            el('span', { class: 'cust-folder-name' }, name),
+            el('span', { class: 'cust-folder-count' }, String(items.length)),
+          ),
+          el('div', { class: 'cust-folder-body' },
+            ...items.map(renderWoCard),
+          ),
+        );
+        list.appendChild(folder);
+      });
+    } else {
+      visible.forEach(w => {
+        list.appendChild(renderWoCard(w));
+      });
+    }
   }
 
   // ===== WO form (no <form>, button-driven) =====
