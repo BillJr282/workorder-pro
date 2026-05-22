@@ -2140,6 +2140,7 @@ $('#wof-add-other').addEventListener('click', () => {
         ),
         el('div', { class: 'wo-meta' },
           el('span', {}, `Status: ${(w.status || 'open').replace('_', ' ')}`),
+          w.customerName ? el('span', {}, `Customer: ${w.customerName}`) : null,
           el('span', {}, `Assignee: ${w.assignee || '—'}`),
           el('span', {}, `Created: ${fmtDate(w.createdAt)}`),
         ),
