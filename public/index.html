@@ -832,7 +832,47 @@
 .wo-card.priority-medium   { border-left-color: #3b82f6; }
 .wo-card.priority-high     { border-left-color: #f97316; }
 .wo-card.priority-urgent   { border-left-color: #ef4444; }rd .wo-meta { margin-bottom: 6px; }
-  /* ============ Ticket 8: Line-item sections ============ */
+ /* Invoiced view: customer folders */
+.cust-folder { margin-bottom: 10px; }
+.cust-folder-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  user-select: none;
+}
+.cust-folder-header:hover { border-color: var(--accent); }
+.cust-folder-chev {
+  display: inline-block;
+  font-size: 12px;
+  width: 12px;
+  transition: transform 0.15s;
+  color: #6b7280;
+}
+.cust-folder.open .cust-folder-chev { transform: rotate(90deg); }
+.cust-folder-name { font-weight: 600; flex: 1; }
+.cust-folder-count {
+  background: #e5e7eb;
+  color: #374151;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.cust-folder-body {
+  display: none;
+  padding: 10px 0 0 0;
+  gap: 10px;
+  flex-direction: column;
+}
+.cust-folder.open .cust-folder-body { display: flex; }
+
+/* ===== Ticket 8: Line-item sections ============ */
 .wo-section { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 14px; }
 .wo-section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .wo-section-head h4 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
