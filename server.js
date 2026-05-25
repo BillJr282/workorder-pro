@@ -501,7 +501,7 @@ function renderWorkOrderPrintHtml(wo) {
   // Photos: collect from procedure responses where field type was "photo"
   const photos = [];
   (wo.procedures || []).forEach((proc) => {
-    (proc.responses || []).forEach((resp) => {
+    (Array.isArray(proc.responses) ? proc.responses : []).forEach((resp) => {
       // resp may be {fieldId, type, value} — value for photo is base64 data URL
       if (resp && resp.type === "photo" && resp.value) {
         photos.push({ caption: resp.label || "", src: resp.value });
