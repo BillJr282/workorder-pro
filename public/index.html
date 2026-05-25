@@ -2903,12 +2903,12 @@ function openWoForm(wo) {
       el('div', { class: 'proc-title' }, proc ? proc.name : '(deleted procedure)'),
       el('div', { class: 'proc-instance-actions' },
         el('button', { class: 'btn btn-secondary btn-sm', onclick: async () => {
-          try { await apiFetch(`/api/workorders/${wo.id}/procedures/${inst.id}/complete`, { method: 'POST' }); await refreshAll(); }
+          try { await apiFetch(`/api/workorders/${wo.id}/procedures/${inst.instanceId}/complete`, { method: 'POST' }); await refreshAll(); }
           catch (e) { alert('Mark complete failed: ' + e.message); }
         }}, inst.completedAt ? `✓ Completed ${fmtDate(inst.completedAt)}` : 'Mark Complete'),
         el('button', { class: 'btn btn-danger btn-sm', onclick: async () => {
           if (!confirm('Detach this procedure?')) return;
-          try { await apiFetch(`/api/workorders/${wo.id}/procedures/${inst.id}`, { method: 'DELETE' }); await refreshAll(); }
+          try { await apiFetch(`/api/workorders/${wo.id}/procedures/${inst.instanceId}`, { method: 'DELETE' }); await refreshAll(); }
           catch (e) { alert('Detach failed: ' + e.message); }
         }}, 'Detach'),
       ),
@@ -2920,7 +2920,7 @@ function openWoForm(wo) {
       const current = (inst.responses || {})[f.id];
       const row = el('div', { class: 'field-row' });
       row.appendChild(el('label', { class: 'field-label' }, f.label || '(unlabeled)', f.required ? el('span', { class: 'req' }, ' *') : null));
-      const save = (val) => queueResponseSave(wo.id, inst.id, f.id, val);
+      const save = (val) => queueResponseSave(wo.id, inst.instanceId, f.id, val);
       if (f.type === 'checkbox') {
         const cb = el('input', { type: 'checkbox' });
         cb.checked = !!current;
