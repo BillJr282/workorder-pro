@@ -2903,7 +2903,7 @@ function openWoForm(wo) {
       el('div', { class: 'proc-title' }, proc ? proc.name : '(deleted procedure)'),
       el('div', { class: 'proc-instance-actions' },
         el('button', { class: 'btn btn-secondary btn-sm', onclick: async () => {
-          try { await apiFetch(`/api/workorders/${wo.id}/procedures/${inst.instanceId}/complete`, { method: 'POST' }); await refreshAll(); }
+          try { await apiFetch(`/api/workorders/${wo.id}/procedures/${inst.instanceId}`, { method: 'PATCH', body: JSON.stringify({ status: 'complete' }) }); await refreshAll(); }
           catch (e) { alert('Mark complete failed: ' + e.message); }
         }}, inst.completedAt ? `✓ Completed ${fmtDate(inst.completedAt)}` : 'Mark Complete'),
         el('button', { class: 'btn btn-danger btn-sm', onclick: async () => {
@@ -3004,12 +3004,12 @@ function openWoForm(wo) {
   }
   async function saveResponseNow(woId, instId, fieldId, value) {
     try {
-      await apiFetch(`/api/workorders/${woId}/procedures/${instId}/responses`, {
-        method: 'PATCH', body: JSON.stringify({ [fieldId]: value }),
+    await apiFetch(`/api/workorders/${woId}/procedures/${instId}`, {
+        method: 'PATCH', body: JSON.stringify({ responses: { [fieldId]: value } }),
       });
       const wo = state.workorders.find(w => w.id === woId);
       if (wo) {
-        const inst = (wo.procedures || []).find(p => p.id === instId);
+        const inst = (wo.procedures || []).find(p => p.instanceId === instId);
         if (inst) { inst.responses = inst.responses || {}; inst.responses[fieldId] = value; }
       }
       if (state.activeWO && state.activeWO.id === woId) {
