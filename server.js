@@ -1105,7 +1105,7 @@ app.patch("/api/workorders/:id/procedures/:instanceId", (req, res) => {
   saveData(data);
   res.json(inst);
 });
-// ===== PART 1 END =====
+app.post("/api/workorders/:id/notes",requireAuth,(req,res)=>{const data=loadData();const wo=data.workorders.find((w)=>w.id===req.params.id);if(!wo)return res.status(404).json({error:"Not found"});const user=getSessionUser(data,req);const text=(req.body&&typeof req.body.text==="string")?req.body.text.trim():"";if(!text)return res.status(400).json({error:"Note text required"});if(!Array.isArray(wo.notes))wo.notes=[];const note={id:uuidv4(),text,author:user?(user.displayName||user.username):"Unknown",createdAt:new Date().toISOString()};wo.notes.push(note);wo.updatedAt=new Date().toISOString();saveData(data);res.json(note);});// ===== PART 1 END =====
 // ===== PART 2 START =====
 // ===== TICKET 10 PART 2 START =====
 // ---------- Auth endpoints ----------
