@@ -2175,12 +2175,12 @@ $('#wof-add-other').addEventListener('click', () => {
     }
     const renderWoCard = (w) => el('div', { class: `card wo-card priority-${w.priority || 'medium'}`, onclick: () => openWorkOrder(w.id) },
       el('div', { class: 'wo-card-header' },
-        el('div', { class: 'wo-title' }, w.title || '(untitled)'),
+        el('div', { class: 'wo-title', style: 'font-weight:700' }, w.title || '(untitled)'),
         el('span', { class: `pill priority-${w.priority || 'medium'}` }, w.priority || 'medium'),
       ),
       el('div', { class: 'wo-meta' },
-        el('span', {}, `Status: ${(w.status || 'open').replace('_', ' ')}`),
-        w.customerName ? el('span', {}, `Customer: ${w.customerName}`) : null,
+        el('span', { style: 'font-weight:700' }, `Status: ${(w.status || 'open').replace('_', ' ')}`),
+        w.customerName ? el('span', { style: 'font-weight:700' }, `Customer: ${w.customerName}`) : null,
         el('span', {}, `Assignee: ${w.assignee || '—'}`),
         el('span', {}, `Created: ${fmtDate(w.createdAt)}`),
       ),
@@ -2656,7 +2656,7 @@ function openWoForm(wo) {
     body.appendChild(card);
   }
 
-  // ---- Photos card (T-photos) ----
+  { const notesSec=el('div',{class:'wo-section',id:'wo-notes-section'}); notesSec.appendChild(el('div',{class:'wo-section-head'},el('h4',{},'Notes'))); const notesFeed=el('div',{class:'notes-feed',style:'max-height:260px;overflow-y:auto;margin-bottom:10px;'}); const renderNotes=()=>{ notesFeed.innerHTML=''; const labourTotal=fmtCAD((wo.totals&&wo.totals.labor)||0); const hasMoney=(wo.labor||[]).length>0; if(hasMoney){ const lt=el('div',{class:'notes-labour-summary',style:'background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:13px;'},el('span',{style:'color:var(--muted)'},'Labour Total: '),el('span',{style:'font-weight:700'},labourTotal)); notesFeed.appendChild(lt); } (wo.notes||[]).slice().reverse().forEach(n=>{ const d=el('div',{class:'note-entry',style:'padding:8px 0;border-bottom:1px solid var(--border);'}); d.appendChild(el('div',{style:'font-size:13px;white-space:pre-wrap;word-break:break-word;'},n.text)); d.appendChild(el('div',{style:'font-size:11px;color:var(--muted);margin-top:3px;'},(n.author||'')+(n.createdAt?' — '+fmtDate(n.createdAt):''))); notesFeed.appendChild(d); }); if(!(wo.notes&&wo.notes.length)&&!hasMoney) notesFeed.appendChild(el('div',{class:'empty',style:'padding:8px 0;'},'No notes yet.')); }; renderNotes(); notesSec.appendChild(notesFeed); const noteInput=el('textarea',{placeholder:'Add a note…',style:'width:100%;box-sizing:border-box;min-height:60px;resize:vertical;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--panel));color:var(--fg);font-size:13px;margin-bottom:6px;'}); const noteBtn=el('button',{type:'button',class:'btn btn-secondary btn-sm'},'Add Note'); noteBtn.addEventListener('click',async()=>{ const t=noteInput.value.trim(); if(!t)return; try{ const note=await apiFetch('/api/workorders/'+wo.id+'/notes',{method:'POST',body:JSON.stringify({text:t})}); if(!Array.isArray(wo.notes))wo.notes=[]; wo.notes.push(note); noteInput.value=''; renderNotes(); }catch(e){alert('Save failed: '+e.message);} }); notesSec.appendChild(noteInput); notesSec.appendChild(noteBtn); body.appendChild(notesSec); }// ---- Photos card (T-photos) ----
   {
     const photosCard = el('div', { class: 'wo-section' });
     photosCard.appendChild(el('div', { class: 'wo-section-head' }, el('h4', {}, 'Photos')));
