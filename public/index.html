@@ -5,7 +5,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>WM Service</title>
-<style>
+<style>h
   :root {
     --bg: #f5f7fa;
     --panel: #ffffff;
@@ -2596,30 +2596,8 @@ function openWoForm(wo) {
     body.appendChild(sec);
   }
 
-  // ---- Labor table (read-only) ----
-  const labor = wo.labor || [];
-  if (labor.length) {
-    const sec = el('div', { class: 'wo-section' });
-    sec.appendChild(el('div', { class: 'wo-section-head' }, el('h4', {}, 'Labor')));
-    const t = el('table', { class: 'li-readonly' });
-    const thead = el('thead'); const trh = el('tr');
-    ['Technician', 'Date', 'Hours', 'Rate', 'Line Total'].forEach((h, i) => {
-      trh.appendChild(el('th', { class: i >= 2 ? 'li-num' : '' }, h));
-    });
-    thead.appendChild(trh); t.appendChild(thead);
-    const tb = el('tbody');
-    labor.forEach(l => {
-      const tr = el('tr');
-      tr.appendChild(el('td', {}, l.technician || '—'));
-      tr.appendChild(el('td', {}, l.date || '—'));
-      tr.appendChild(el('td', { class: 'li-num' }, String(l.hours ?? 0)));
-      tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(l.hourlyRate)));
-      tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(l.lineTotal)));
-      tb.appendChild(tr);
-    });
-    t.appendChild(tb); sec.appendChild(t);
-    body.appendChild(sec);
-  }
+  // ---- Labor section with inline Add Labour ----
+  { const labor = wo.labor || []; const labourSec = el('div', { class: 'wo-section' }); const secHead = el('div', { class: 'wo-section-head', style: 'display:flex;align-items:center;justify-content:space-between;' }); secHead.appendChild(el('h4', {}, 'Labour')); const addLaborBtn = el('button', { type: 'button', class: 'btn btn-secondary btn-sm', style: 'margin-left:auto;' }, '+ Add Labour'); secHead.appendChild(addLaborBtn); labourSec.appendChild(secHead); if (labor.length) { const t = el('table', { class: 'li-readonly' }); const thead = el('thead'); const trh = el('tr'); ['Technician', 'Date', 'Hours', 'Rate', 'Notes', 'Line Total'].forEach((h, i) => { trh.appendChild(el('th', { class: (i >= 2 && i !== 4) ? 'li-num' : '' }, h)); }); thead.appendChild(trh); t.appendChild(thead); const tb = el('tbody'); labor.forEach(l => { const tr = el('tr'); tr.appendChild(el('td', {}, l.technician || '—')); tr.appendChild(el('td', {}, l.date || '—')); tr.appendChild(el('td', { class: 'li-num' }, String(l.hours ?? 0))); tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(l.hourlyRate))); tr.appendChild(el('td', {}, l.notes || '')); tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(l.lineTotal))); tb.appendChild(tr); }); t.appendChild(tb); labourSec.appendChild(t); } const addLaborForm = el('div', { class: 'add-labor-form', style: 'display:none;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:10px;' }); const LABOR_RATES_D = [{ label: 'Field', rate: 165 }, { label: 'Shop', rate: 145 }, { label: 'Fire', rate: 138 }, { label: 'Lube', rate: 138 }]; const fLblRow = (lbl, inp) => { const row = el('div', { style: 'display:flex;flex-direction:column;gap:3px;margin-bottom:8px;' }); row.appendChild(el('label', { style: 'font-size:12px;color:var(--muted);font-weight:600;' }, lbl)); row.appendChild(inp); return row; }; const inpSt = 'padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--panel));color:var(--fg);font-size:13px;width:100%;box-sizing:border-box;'; let techInp; if (isAdmin()) { techInp = document.createElement('select'); techInp.style.cssText = inpSt; const fillTech = (users) => { let o = '<option value="">— pick —</option>'; (users || []).forEach(u => { const s = escapeHtml(u.username || ''); o += '<option value="' + s + '">' + s + '</option>'; }); techInp.innerHTML = o; }; fillTech(usersLiteCache || []); ensureUsersLite().then(fillTech); } else { techInp = el('input', { type: 'text', style: inpSt }); techInp.value = currentUser ? (currentUser.displayName || currentUser.username || '') : ''; techInp.readOnly = true; techInp.style.opacity = '0.7'; } const dateInp2 = el('input', { type: 'date', style: inpSt }); dateInp2.value = new Date().toISOString().slice(0, 10); const hoursInp2 = el('input', { type: 'number', step: '0.25', min: '0', placeholder: '0', style: inpSt }); const rateInp2 = document.createElement('select'); rateInp2.style.cssText = inpSt; rateInp2.innerHTML = '<option value="">— select —</option>' + LABOR_RATES_D.map(r => '<option value="' + r.rate + '">' + r.label + ' ($' + r.rate + '/h)</option>').join(''); const notesInp2 = el('input', { type: 'text', placeholder: 'Optional notes', style: inpSt }); const fGrid = el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:0 12px;' }); fGrid.appendChild(fLblRow('Technician', techInp)); fGrid.appendChild(fLblRow('Date', dateInp2)); fGrid.appendChild(fLblRow('Hours', hoursInp2)); fGrid.appendChild(fLblRow('Rate', rateInp2)); fGrid.appendChild(fLblRow('Notes', notesInp2)); addLaborForm.appendChild(fGrid); const fBtns = el('div', { style: 'display:flex;gap:8px;justify-content:flex-end;margin-top:4px;' }); const cancelLaborBtn = el('button', { type: 'button', class: 'btn btn-secondary btn-sm' }, 'Cancel'); const saveLaborBtn = el('button', { type: 'button', class: 'btn btn-sm' }, 'Save Labour'); fBtns.appendChild(cancelLaborBtn); fBtns.appendChild(saveLaborBtn); addLaborForm.appendChild(fBtns); labourSec.appendChild(addLaborForm); addLaborBtn.addEventListener('click', () => { addLaborForm.style.display = addLaborForm.style.display === 'none' ? 'block' : 'none'; }); cancelLaborBtn.addEventListener('click', () => { addLaborForm.style.display = 'none'; }); saveLaborBtn.addEventListener('click', async () => { const tech = (techInp.value || '').trim(); const hrs = parseFloat(hoursInp2.value) || 0; const rate = parseFloat(rateInp2.value) || 0; if (!tech) { alert('Please select a technician.'); return; } if (!hrs) { alert('Please enter hours.'); return; } if (!rate) { alert('Please select a rate.'); return; } saveLaborBtn.disabled = true; saveLaborBtn.textContent = 'Saving…'; try { const fresh = await apiFetch('/api/workorders/' + wo.id); const newEntry = { id: 'r_' + Math.random().toString(36).slice(2, 9), technician: tech, date: dateInp2.value || '', hours: hrs, hourlyRate: rate, notes: notesInp2.value.trim(), lineTotal: Math.round(hrs * rate * 100) / 100 }; const saved = await apiFetch('/api/workorders/' + wo.id, { method: 'PUT', body: JSON.stringify({ labor: (fresh.labor || []).concat([newEntry]) }) }); state.activeWO = saved; const wIdx = (state.workorders || []).findIndex(x => x.id === saved.id); if (wIdx !== -1) state.workorders[wIdx] = saved; renderWorkOrderDetail(); } catch (e) { alert('Save failed: ' + e.message); saveLaborBtn.disabled = false; saveLaborBtn.textContent = 'Save Labour'; } }); body.appendChild(labourSec); }
 
   // ---- Other Costs table (read-only) ----
   const other = wo.otherCosts || [];
