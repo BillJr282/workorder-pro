@@ -1,5 +1,5 @@
 // ===== PART 1 START =====
-// server.js â WorkOrder Pro
+// server.js Ã¢ÂÂ WorkOrder Pro
 // Express + uuid + flat-file JSON storage (data.json)
 // Routes: /api/workorders, /api/procedures (CRUD), AI generator,
 //         AI assistant with tool use
@@ -24,7 +24,7 @@ app.use(cookieParser());
 // ===== Photo storage (T-photos) =====
 // Photos live on the persistent volume alongside data.json.
 // DATA_DIR is configured to /data via Railway env var; falls back to __dirname for local dev.
-// We don't try to use DATA_DIR before it's been declared below â so PHOTOS_DIR is set lazily on first use.
+// We don't try to use DATA_DIR before it's been declared below Ã¢ÂÂ so PHOTOS_DIR is set lazily on first use.
 let PHOTOS_DIR_CACHED = null;
 function getPhotosDir() {
   if (PHOTOS_DIR_CACHED) return PHOTOS_DIR_CACHED;
@@ -436,7 +436,7 @@ app.put("/api/workorders/:id", (req, res) => {
       return res.status(400).json({ error: `Invalid status. Allowed: ${allowedStatuses.join(", ")}` });
     }
     const prevStatus = wo.status;
-    logActivity(wo, `Status changed: ${prevStatus} â ${status}`);
+    logActivity(wo, `Status changed: ${prevStatus} Ã¢ÂÂ ${status}`);
     wo.status = status;
     // Auto-stamp lifecycle timestamps
     const nowIso = new Date().toISOString();
@@ -459,14 +459,14 @@ app.put("/api/workorders/:id", (req, res) => {
   if (assignee !== undefined) {
     const prevAssignee = wo.assignee || "";
     wo.assignee = assignee;
-    // Auto-stamp on first assignment (empty â non-empty)
+    // Auto-stamp on first assignment (empty Ã¢ÂÂ non-empty)
     if (!prevAssignee && assignee && !wo.assignedAt) {
       wo.assignedAt = new Date().toISOString();
       logActivity(wo, `Assigned to ${assignee}`);
     } else if (prevAssignee && !assignee) {
       logActivity(wo, `Unassigned (was ${prevAssignee})`);
     } else if (prevAssignee && assignee && prevAssignee !== assignee) {
-      logActivity(wo, `Reassigned: ${prevAssignee} â ${assignee}`);
+      logActivity(wo, `Reassigned: ${prevAssignee} Ã¢ÂÂ ${assignee}`);
     }
   }
   applyWorkOrderUpdates(wo, body);
@@ -502,7 +502,7 @@ function renderWorkOrderPrintHtml(wo) {
   const photos = [];
   (wo.procedures || []).forEach((proc) => {
     (Array.isArray(proc.responses) ? proc.responses : []).forEach((resp) => {
-      // resp may be {fieldId, type, value} â value for photo is base64 data URL
+      // resp may be {fieldId, type, value} Ã¢ÂÂ value for photo is base64 data URL
       if (resp && resp.type === "photo" && resp.value) {
         photos.push({ caption: resp.label || "", src: resp.value });
       }
@@ -560,7 +560,7 @@ function renderWorkOrderPrintHtml(wo) {
     if (fields.length === 0) return '';
     const rows = fields.map(f => {
       const raw = responses[f.id];
-      let displayVal = '—';
+      let displayVal = 'â';
       if (raw !== undefined && raw !== null && raw !== '') {
         if (f.type === 'passfail') {
           const v = String(raw).toLowerCase();
@@ -573,16 +573,25 @@ function renderWorkOrderPrintHtml(wo) {
         } else if (f.type === 'signature') {
           displayVal = raw ? '<div class="proc-sig-box"><img src="' + escHtml(raw) + '" style="max-height:50px;max-width:200px;" /></div>' : '<div class="proc-sig-box"></div>';
         } else if (f.type === 'photo') {
-          displayVal = raw ? '<img src="' + escHtml(raw) + '" style="max-height:80px;max-width:150px;" />' : '—';
+          displayVal = raw ? '<img src="' + escHtml(raw) + '" style="max-height:80px;max-width:150px;" />' : 'â';
         } else {
           displayVal = escHtml(raw);
         }
       } else if (f.type === 'signature') {
         displayVal = '<div class="proc-sig-box"></div>';
       }
+      if (f.type === 'section') {
+        return '<tr><td colspan="2" style="background:#eee;font-weight:bold;font-size:11px;padding:6px 8px;border-top:2px solid #999;text-transform:uppercase;letter-spacing:0.5px;">' + escHtml(f.label) + '</td></tr>';
+      }
+      if (f.type === 'select') { displayVal = (raw !== undefined && raw !== null && raw !== '') ? escHtml(raw) : '—'; }
+      if (f.showIf) {
+        const triggerVal = responses[f.showIf.fieldId];
+        const condMet = triggerVal !== undefined && triggerVal !== null && String(triggerVal).toLowerCase() === String(f.showIf.value).toLowerCase();
+        if (!condMet) return '';
+      }
       return '<tr><th>' + escHtml(f.label) + '</th><td>' + displayVal + '</td></tr>';
     }).join('');
-    const completedStr = proc.completedAt ? ' — Completed: ' + escHtml(new Date(proc.completedAt).toLocaleString()) : (proc.status === 'in_progress' ? ' — In Progress' : '');
+    const completedStr = proc.completedAt ? ' â Completed: ' + escHtml(new Date(proc.completedAt).toLocaleString()) : (proc.status === 'in_progress' ? ' â In Progress' : '');
     return `<div class="proc-section">
       <div class="proc-header">
         <div class="proc-title">${escHtml(proc.name || 'Procedure')}${completedStr}</div>
@@ -595,7 +604,7 @@ return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Work Order ${escHtml(woNumber)} â ${escHtml(wo.title || "")}</title>
+<title>Work Order ${escHtml(woNumber)} Ã¢ÂÂ ${escHtml(wo.title || "")}</title>
 <style>
   @page { size: Letter portrait; margin: 0.5in; }
   * { box-sizing: border-box; }
@@ -648,7 +657,7 @@ return `<!DOCTYPE html>
 <body>
 <div class="print-bar">
   <span>Press Ctrl+P (or Cmd+P) to print or save as PDF.</span>
-  <button class="print-btn" onclick="window.print()">ð¨ Print</button>
+  <button class="print-btn" onclick="window.print()">Ã°ÂÂÂ¨ Print</button>
 </div>
 <div class="header">
   <div>
@@ -667,21 +676,21 @@ return `<!DOCTYPE html>
 <div class="grid-2" style="margin-top:12px;">
   <div class="block">
     <div class="label">Customer</div>
-    <div class="value">${escHtml(wo.customerName || "â")}</div>
+    <div class="value">${escHtml(wo.customerName || "Ã¢ÂÂ")}</div>
   </div>
   <div class="block">
     <div class="label">Status / Priority</div>
-    <div class="value"><strong>${escHtml((wo.status || "open").toUpperCase())}</strong> Â· ${escHtml((wo.priority || "medium").toUpperCase())}</div>
+    <div class="value"><strong>${escHtml((wo.status || "open").toUpperCase())}</strong> ÃÂ· ${escHtml((wo.priority || "medium").toUpperCase())}</div>
     <div class="label">Type</div>
-    <div class="value">${escHtml(wo.workType || "â")}</div>
+    <div class="value">${escHtml(wo.workType || "Ã¢ÂÂ")}</div>
     <div class="label">Assignee</div>
-    <div class="value">${escHtml(wo.assignee || "â")}</div>
+    <div class="value">${escHtml(wo.assignee || "Ã¢ÂÂ")}</div>
     <div class="label">Lifecycle</div>
     <div class="value" style="font-size:11px;">
       ${wo.assignedAt ? "Assigned: " + escHtml(new Date(wo.assignedAt).toLocaleString()) + "<br/>" : ""}
       ${wo.startedAt ? "Started: " + escHtml(new Date(wo.startedAt).toLocaleString()) + "<br/>" : ""}
       ${wo.completedAt ? "Completed: " + escHtml(new Date(wo.completedAt).toLocaleString()) : ""}
-      ${(!wo.assignedAt && !wo.startedAt && !wo.completedAt) ? "â" : ""}
+      ${(!wo.assignedAt && !wo.startedAt && !wo.completedAt) ? "Ã¢ÂÂ" : ""}
     </div>
   </div>
 </div>
@@ -690,19 +699,19 @@ return `<!DOCTYPE html>
 <div class="grid-2">
   <div class="block">
     <div class="label">Name</div>
-    <div class="value">${escHtml(a.name || "â")}</div>
+    <div class="value">${escHtml(a.name || "Ã¢ÂÂ")}</div>
     <div class="label">Make / Model</div>
     <div class="value">${escHtml(a.make || "")} ${escHtml(a.model || "")}</div>
     <div class="label">Unit Number</div>
-    <div class="value">${escHtml(a.unitNumber || "â")}</div>
+    <div class="value">${escHtml(a.unitNumber || "Ã¢ÂÂ")}</div>
   </div>
   <div class="block">
     <div class="label">Serial Number</div>
-    <div class="value">${escHtml(a.serialNumber || "â")}</div>
+    <div class="value">${escHtml(a.serialNumber || "Ã¢ÂÂ")}</div>
     <div class="label">Hours (current)</div>
-    <div class="value">${escHtml(a.hours != null ? a.hours : "â")}</div>
+    <div class="value">${escHtml(a.hours != null ? a.hours : "Ã¢ÂÂ")}</div>
     <div class="label">Hours at Service</div>
-    <div class="value">${escHtml(wo.hoursAtService != null ? wo.hoursAtService : "â")}</div>
+    <div class="value">${escHtml(wo.hoursAtService != null ? wo.hoursAtService : "Ã¢ÂÂ")}</div>
   </div>
 </div>
 
@@ -731,7 +740,7 @@ ${proceduresHtml.length > 0 ? '<h2>Inspection Procedures</h2>' + proceduresHtml 
   <div class="sig-line">Customer Signature / Date</div>
 </div>
 
-<div class="footer-meta">WM Service Â· WO-${escHtml(woNumber)} Â· Generated ${escHtml(new Date().toLocaleString())}</div>
+<div class="footer-meta">WM Service ÃÂ· WO-${escHtml(woNumber)} ÃÂ· Generated ${escHtml(new Date().toLocaleString())}</div>
 </body>
 </html>`;
 }
@@ -739,22 +748,29 @@ ${proceduresHtml.length > 0 ? '<h2>Inspection Procedures</h2>' + proceduresHtml 
 app.get("/api/workorders/:id/print", (req, res) => {
   const data = loadData();
   const wo = data.workorders.find((w) => w.id === req.params.id);
-  if (!wo) return res.status(404).send("<h1>404 â Work Order not found</h1>");
+  if (!wo) return res.status(404).send("<h1>404 Ã¢ÂÂ Work Order not found</h1>");
   const html = renderWorkOrderPrintHtml(wo);
   res.set("Content-Type", "text/html; charset=utf-8");
   res.send(html);
 });
 
 // ---------- Procedures ----------
-const ALLOWED_FIELD_TYPES = ["checkbox", "text", "number", "passfail", "date", "signature", "photo"];
+const ALLOWED_FIELD_TYPES = ["checkbox", "text", "number", "passfail", "date", "signature", "photo", "section", "select"];
 
 function normalizeField(f) {
-  return {
+  const nf = {
     id: f.id || uuidv4(),
     type: ALLOWED_FIELD_TYPES.includes(f.type) ? f.type : "text",
     label: f.label || "Untitled field",
     required: !!f.required,
   };
+  if (f.showIf && typeof f.showIf === "object" && f.showIf.fieldId) {
+    nf.showIf = { fieldId: String(f.showIf.fieldId), value: String(f.showIf.value || "") };
+  }
+  if (f.type === "select" && Array.isArray(f.options)) {
+    nf.options = f.options.filter(o => typeof o === "string").slice(0, 50);
+  }
+  return nf;
 }
 
 app.get("/api/procedures", (req, res) => {
@@ -1275,7 +1291,7 @@ Rules:
   * "signature" for sign-offs (typically 1-2 at the end)
   * "photo" for visual evidence
 - Mark "required: true" for safety-critical items and any signature fields. Otherwise required: false.
-- Aim for 8-20 fields total. Order them logically (pre-checks â main inspection â measurements â sign-off).
+- Aim for 8-20 fields total. Order them logically (pre-checks Ã¢ÂÂ main inspection Ã¢ÂÂ measurements Ã¢ÂÂ sign-off).
 - Be specific and industry-realistic. Output ONLY the JSON object.`;
 
 async function callAnthropic(body, timeoutMs = 30000) {
@@ -1347,12 +1363,12 @@ app.post("/api/procedures/generate", async (req, res) => {
 const ASSISTANT_SYSTEM_PROMPT = `You are the WorkOrder Pro AI assistant. You help maintenance technicians and supervisors manage work orders and procedures by calling tools.
 
 GENERAL BEHAVIOR:
-- Be concise. Maintenance staff are busy â short, useful answers, not paragraphs.
+- Be concise. Maintenance staff are busy Ã¢ÂÂ short, useful answers, not paragraphs.
 - When the user asks for something actionable, call the appropriate tool. Don't just describe what you would do.
 - When listing items, summarize don't dump. "You have 5 open work orders, 2 high priority. The hydraulic forklift one looks urgent." not a giant table.
 - After completing an action, briefly confirm what was done.
 - If a request is ambiguous (e.g. "delete the work order" but multiple match), ask which one before calling a tool.
-- For destructive actions (delete_work_order, detach_procedure), call the tool â the system will pause for user confirmation automatically.
+- For destructive actions (delete_work_order, detach_procedure), call the tool Ã¢ÂÂ the system will pause for user confirmation automatically.
 
 WORK ORDER FIELDS:
 - status: "open" | "in_progress" | "complete"
@@ -1360,17 +1376,17 @@ WORK ORDER FIELDS:
 - assignee: free-text name (current users are "bill" and "serina")
 - customerName: free-text customer name (e.g. "Acme Corp")
 - workType: "" | "repair" | "install" | "maintenance" | "inspection"
-- asset: { name, serialNumber, unitNumber, hours, make, model } â the equipment being worked on; hours captured at time of WO creation
-- parts: list of { partNumber, description, quantity, unitCost, lineTotal } â line items
-- labor: list of { technician, date, hours, hourlyRate, lineTotal } â all labor is billable
-- otherCosts: list of { description, amount } â travel, fees, subcontractors, etc.
-- totals: { parts, labor, other, grand } â server-computed in CAD; never set directly
+- asset: { name, serialNumber, unitNumber, hours, make, model } Ã¢ÂÂ the equipment being worked on; hours captured at time of WO creation
+- parts: list of { partNumber, description, quantity, unitCost, lineTotal } Ã¢ÂÂ line items
+- labor: list of { technician, date, hours, hourlyRate, lineTotal } Ã¢ÂÂ all labor is billable
+- otherCosts: list of { description, amount } Ã¢ÂÂ travel, fees, subcontractors, etc.
+- totals: { parts, labor, other, grand } Ã¢ÂÂ server-computed in CAD; never set directly
 
 CURRENCY: All money values are CAD. No tax handling.
 
 TOOLS FOR LINE ITEMS:
 - Use add_part / add_labor / add_other_cost to append a single row to a work order.
-- Use remove_part / remove_labor / remove_other_cost to delete a row by its row id (DESTRUCTIVE â system will confirm).
+- Use remove_part / remove_labor / remove_other_cost to delete a row by its row id (DESTRUCTIVE Ã¢ÂÂ system will confirm).
 - Use set_work_order_customer / set_work_order_asset / set_work_order_work_type for those header fields.
 - create_work_order and update_work_order also accept customerName, workType, and asset directly.
 
@@ -1379,7 +1395,7 @@ PROCEDURES:
 - Attaching a procedure to a work order takes a snapshot at that moment.
 - When asked to "create and attach a procedure" for a work order, you may use create_procedure_from_description which creates AND attaches in one step.
 
-Always use real IDs from list/get tools â never invent IDs.`;
+Always use real IDs from list/get tools Ã¢ÂÂ never invent IDs.`;
 
 // ---------- Tool registry ----------
 // Each tool: { name, description, input_schema, run(input) -> string|object, destructive? }
@@ -1520,7 +1536,7 @@ const TOOLS = [
   },
   {
     name: "delete_work_order",
-    description: "Permanently delete a work order. DESTRUCTIVE â the system will require user confirmation before running.",
+    description: "Permanently delete a work order. DESTRUCTIVE Ã¢ÂÂ the system will require user confirmation before running.",
     destructive: true,
     input_schema: {
       type: "object",
@@ -1633,7 +1649,7 @@ const TOOLS = [
   },
   {
     name: "detach_procedure",
-    description: "Detach a procedure instance from a work order. DESTRUCTIVE â system will require user confirmation.",
+    description: "Detach a procedure instance from a work order. DESTRUCTIVE Ã¢ÂÂ system will require user confirmation.",
     destructive: true,
     input_schema: {
       type: "object",
@@ -1712,7 +1728,7 @@ const TOOLS = [
   },
   {
     name: "set_work_order_asset",
-    description: "Set asset fields on a work order. Provide any subset of {name, serialNumber, unitNumber, hours, make, model} â omitted fields are left unchanged.",
+    description: "Set asset fields on a work order. Provide any subset of {name, serialNumber, unitNumber, hours, make, model} Ã¢ÂÂ omitted fields are left unchanged.",
     input_schema: {
       type: "object",
       properties: {
@@ -1797,7 +1813,7 @@ const TOOLS = [
   },
   {
     name: "remove_part",
-    description: "Remove a part line item from a work order by its row id. DESTRUCTIVE â system will require user confirmation.",
+    description: "Remove a part line item from a work order by its row id. DESTRUCTIVE Ã¢ÂÂ system will require user confirmation.",
     destructive: true,
     input_schema: {
       type: "object",
@@ -1855,7 +1871,7 @@ const TOOLS = [
   },
   {
     name: "remove_labor",
-    description: "Remove a labor line item from a work order by its row id. DESTRUCTIVE â system will require user confirmation.",
+    description: "Remove a labor line item from a work order by its row id. DESTRUCTIVE Ã¢ÂÂ system will require user confirmation.",
     destructive: true,
     input_schema: {
       type: "object",
@@ -1909,7 +1925,7 @@ const TOOLS = [
   },
   {
     name: "remove_other_cost",
-    description: "Remove an other-cost line item from a work order by its row id. DESTRUCTIVE â system will require user confirmation.",
+    description: "Remove an other-cost line item from a work order by its row id. DESTRUCTIVE Ã¢ÂÂ system will require user confirmation.",
     destructive: true,
     input_schema: {
       type: "object",
@@ -2005,7 +2021,7 @@ app.post("/api/assistant", async (req, res) => {
       messages.push({ role: "assistant", content: apiResp.content });
 
       if (apiResp.stop_reason !== "tool_use") {
-        // Done â no more tool calls requested
+        // Done Ã¢ÂÂ no more tool calls requested
         break;
       }
 
@@ -2209,7 +2225,7 @@ function photoBucketKey(section) {
   return null;
 }
 
-// POST /api/workorders/:id/photos/:section â upload a photo to a section
+// POST /api/workorders/:id/photos/:section Ã¢ÂÂ upload a photo to a section
 app.post("/api/workorders/:id/photos/:section", photoUpload.single("photo"), async (req, res) => {
   try {
     const { id, section } = req.params;
@@ -2252,7 +2268,7 @@ app.post("/api/workorders/:id/photos/:section", photoUpload.single("photo"), asy
   }
 });
 
-// GET /api/workorders/:id/photos/:photoId â serve a photo file
+// GET /api/workorders/:id/photos/:photoId Ã¢ÂÂ serve a photo file
 app.get("/api/workorders/:id/photos/:photoId", (req, res) => {
   try {
     const { id, photoId } = req.params;
@@ -2271,7 +2287,7 @@ app.get("/api/workorders/:id/photos/:photoId", (req, res) => {
   }
 });
 
-// DELETE /api/workorders/:id/photos/:section/:photoId â remove a photo
+// DELETE /api/workorders/:id/photos/:section/:photoId Ã¢ÂÂ remove a photo
 app.delete("/api/workorders/:id/photos/:section/:photoId", (req, res) => {
   try {
     const { id, section, photoId } = req.params;
@@ -2295,7 +2311,7 @@ app.delete("/api/workorders/:id/photos/:section/:photoId", (req, res) => {
   }
 });
 
-// PATCH /api/workorders/:id/photos/:section/:photoId â update caption
+// PATCH /api/workorders/:id/photos/:section/:photoId Ã¢ÂÂ update caption
 app.patch("/api/workorders/:id/photos/:section/:photoId", (req, res) => {
   try {
     const { id, section, photoId } = req.params;
