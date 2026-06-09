@@ -567,7 +567,7 @@
   /* Mobile */
   @media (max-width: 720px) {
     .app-grid { grid-template-columns: 1fr; }
-    /* ===== T19 PART 1 â mobile app shell ===== */
+    /* ===== T19 PART 1 — mobile app shell ===== */
     .app-grid { grid-template-columns: 1fr !important; }
     .sidebar {
       position: fixed;
@@ -585,7 +585,7 @@
    .main { padding: 12px !important; }
     /* ===== end T19 PART 1 mobile app shell ===== */
 
-    /* ===== T19 PART 2 â mobile cards + tabs ===== */
+    /* ===== T19 PART 2 — mobile cards + tabs ===== */
     .card-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
     .wo-card { padding: 12px !important; }
     .wo-tabs {
@@ -600,7 +600,7 @@
     .view-header h2 { font-size: 18px !important; }
     /* ===== end T19 PART 2 mobile cards + tabs ===== */
 
-    /* ===== T19 PART 2 â mobile modal full-screen ===== */
+    /* ===== T19 PART 2 — mobile modal full-screen ===== */
     .modal-backdrop { padding: 0 !important; }
     .modal {
       width: 100% !important;
@@ -630,7 +630,7 @@
     .proc-field { grid-template-columns: 1fr; }
     .proc-field-input { justify-content: flex-start; }
     .sig-wrap, .photo-wrap { align-items: flex-start; }
-    /* ===== T19 PART 2 â AI chat bottom sheet ===== */
+    /* ===== T19 PART 2 — AI chat bottom sheet ===== */
     .chat-panel {
       left: 0 !important;
       right: 0 !important;
@@ -649,7 +649,7 @@
     .chat-fab { right: 16px; bottom: 16px; }
     /* ===== end T19 PART 2 AI chat bottom sheet ===== */
 
-    /* ===== T19 PART 3 â touch targets ===== */
+    /* ===== T19 PART 3 — touch targets ===== */
     .btn,
     .btn-icon,
     .wo-tab,
@@ -672,7 +672,7 @@
     font-size: 22px;
     margin-right: 10px;
   }
-  /* ===== T19 PART 1 â sidebar backdrop base ===== */
+  /* ===== T19 PART 1 — sidebar backdrop base ===== */
   .sidebar-backdrop {
     display: none;
     position: fixed;
@@ -687,8 +687,8 @@
 .wo-desc { color: var(--text); margin: 6px 0 14px; white-space: pre-wrap; }
 .wo-ca.wo-card .wo-meta { margin-bottom: 6px; }
 
-  /* ââââââââââ Ticket 20: WO list tabs ââââââââââ */
-/* ===== T17 PART 1 â search row styles ===== */
+  /* ━━━━━━━━━━ Ticket 20: WO list tabs ━━━━━━━━━━ */
+/* ===== T17 PART 1 — search row styles ===== */
 .wo-search-row {
   display: flex;
   align-items: center;
@@ -816,7 +816,7 @@
   border-color: rgba(59,130,246,0.45);
 }
 
-  /* ââââââââââ Ticket 21: Priority colors ââââââââââ */
+  /* ━━━━━━━━━━ Ticket 21: Priority colors ━━━━━━━━━━ */
 .pill {
   display: inline-flex;
   align-items: center;
@@ -1013,7 +1013,7 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
   <!-- Loading state while we check setup status -->
   <div class="login-card" id="auth-loading">
     <img src="/wordmark.svg" alt="WM Service" class="login-logo">
-    <p>Loadingâ¦</p>
+    <p>Loading…</p>
   </div>
 </div>
 
@@ -1046,7 +1046,7 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
 </nav>
       <div class="sidebar-footer">
   <div class="user-badge">
-    <span id="current-user-name">â</span>
+    <span id="current-user-name">—</span>
     <span class="user-role-pill" id="current-user-role"></span>
   </div>
   <button class="btn-icon" id="logout-btn" title="Sign out"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
@@ -1062,7 +1062,7 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
           </div>
           <button class="btn" id="new-wo-btn">+ New Work Order</button>
         </div>
-        <!-- ===== T17 PART 1 START â scoped search row ===== -->
+        <!-- ===== T17 PART 1 START — scoped search row ===== -->
         <div class="wo-search-row" id="wo-search-row">
           <label class="wo-search-label" for="wo-search-scope">Search by:</label>
           <select id="wo-search-scope" class="wo-search-scope">
@@ -1075,7 +1075,7 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
               type="text"
               id="wo-search-text"
               class="wo-search-input"
-              placeholder="Type a customer nameâ¦"
+              placeholder="Type a customer name…"
               autocomplete="off"
             />
             <select id="wo-search-status" class="wo-search-input" style="display:none;">
@@ -1225,7 +1225,7 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
 <div class="field-row">
   <label>Type of Work</label>
   <select id="wof-work-type">
-    <option value="">â select â</option>
+    <option value="">— select —</option>
     <option value="repair">Repair</option>
     <option value="install">Install</option>
     <option value="maintenance">Maintenance</option>
@@ -1544,7 +1544,7 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
           <div style="flex:1;">
             <label>Work Type</label>
             <select id="tf-worktype">
-              <option value="">â</option>
+              <option value="">—</option>
               <option value="repair">Repair</option>
               <option value="install">Install</option>
               <option value="maintenance">Maintenance</option>
@@ -1572,11 +1572,11 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
         <div class="form-row" style="display:flex; gap:12px;">
           <div style="flex:1;">
             <label>Customer (optional)</label>
-            <select id="tf-customer"><option value="">â</option></select>
+            <select id="tf-customer"><option value="">—</option></select>
           </div>
           <div style="flex:1;">
             <label>Asset (optional)</label>
-            <select id="tf-asset"><option value="">â</option></select>
+            <select id="tf-asset"><option value="">—</option></select>
           </div>
         </div>
         <div class="form-row">
@@ -1631,7 +1631,7 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
   </div>
   <div class="chat-scroll" id="chat-scroll"></div>
   <div class="chat-input-bar">
-    <textarea id="chat-input" rows="1" placeholder="Ask me anythingâ¦ e.g. 'Create a work order for forklift hydraulics'"></textarea>
+    <textarea id="chat-input" rows="1" placeholder="Ask me anything… e.g. 'Create a work order for forklift hydraulics'"></textarea>
     <button class="btn btn-ai" id="chat-send" title="Send"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
   </div>
 </aside>
@@ -1755,7 +1755,7 @@ async function attemptLogin() {
   const u = $('#login-user').value.trim();
   const p = $('#login-pass').value;
   if (!u || !p) { $('#login-error').textContent = 'Username and password required'; return; }
-  $('#login-error').textContent = 'Signing inâ¦';
+  $('#login-error').textContent = 'Signing in…';
   try {
     const res = await apiFetch('/api/login', { method: 'POST', body: JSON.stringify({ username: u, password: p }) });
     currentUser = res.user;
@@ -1774,7 +1774,7 @@ async function attemptSetup() {
   if (!u || !p) { $('#setup-error').textContent = 'Username and password required'; return; }
   if (p.length < 8) { $('#setup-error').textContent = 'Password must be at least 8 characters'; return; }
   if (p !== p2) { $('#setup-error').textContent = 'Passwords do not match'; return; }
-  $('#setup-error').textContent = 'Creating adminâ¦';
+  $('#setup-error').textContent = 'Creating admin…';
   try {
     const res = await apiFetch('/api/setup', { method: 'POST', body: JSON.stringify({ username: u, password: p, displayName: d }) });
     currentUser = res.user;
@@ -1827,7 +1827,7 @@ async function bootAuth() {
     showApp();
     return;
   } catch (_) { /* not signed in */ }
-  // No session â check whether system needs setup
+  // No session — check whether system needs setup
   try {
     const status = await apiFetch('/api/setup-status');
     if (status.needsSetup) showSetupForm();
@@ -1851,13 +1851,13 @@ async function bootAuth() {
     $('#view-procedures').style.display = v === 'procedures' ? '' : 'none';
     if (v === 'workorders') renderWorkOrders();
     else renderProcedures();
-    // Close mobile sidebar after navigation â T19: also hide backdrop
+    // Close mobile sidebar after navigation — T19: also hide backdrop
     $('#sidebar').classList.remove('open');
     const __bdNav = document.getElementById('sidebar-backdrop');
     if (__bdNav) __bdNav.classList.remove('show');
   }
 
-  // Mobile menu (two buttons) â T19: also toggle backdrop visibility
+  // Mobile menu (two buttons) — T19: also toggle backdrop visibility
   function toggleMobileSidebar(forceState) {
     const sb = $('#sidebar');
     const bd = $('#sidebar-backdrop');
@@ -1994,20 +1994,20 @@ function renderWofLaborRows() {
   woFormEdit.labor.forEach(l => {
     const tr = el('tr');
 
-    // Technician cell â dropdown when current value is empty or matches a known user
+    // Technician cell — dropdown when current value is empty or matches a known user
     const currentTech = (l.technician || '').trim();
     const inList = !currentTech || userOptions.includes(currentTech);
     let techNode;
     if (inList && userOptions.length) {
       techNode = document.createElement('select');
       techNode.className = 'li-tech-select';
-      let html = '<option value="">â pick â</option>';
+      let html = '<option value="">— pick —</option>';
       userOptions.forEach(u => {
         const safe = escapeHtml(u);
         const sel = u === currentTech ? ' selected' : '';
         html += '<option value="' + safe + '"' + sel + '>' + safe + '</option>';
       });
-      html += '<option value="__custom__">(customâ¦)</option>';
+      html += '<option value="__custom__">(custom…)</option>';
       techNode.innerHTML = html;
       techNode.addEventListener('change', () => {
         if (techNode.value === '__custom__') {
@@ -2040,7 +2040,7 @@ function renderWofLaborRows() {
       { label: 'Fire',  rate: 138 },
       { label: 'Lube',  rate: 138 }
     ];
-    let rateHtml = '<option value="">â select â</option>';
+    let rateHtml = '<option value="">— select —</option>';
     LABOR_RATES.forEach(o => {
       const sel = (Number(l.hourlyRate) === o.rate) ? ' selected' : '';
       rateHtml += '<option value="' + o.rate + '"' + sel + '>' + o.label + ' ($' + o.rate + '/h)</option>';
@@ -2115,7 +2115,7 @@ $('#wof-add-other').addEventListener('click', () => {
     return 'created';
   }
 
- // ===== T17 PART 2 START â search state + helpers =====
+ // ===== T17 PART 2 START — search state + helpers =====
   const woSearch = { scope: 'customer', text: '', status: '' };
 
   function woSearchActive() {
@@ -2145,7 +2145,7 @@ $('#wof-add-other').addEventListener('click', () => {
     }
     return true;
   }
-  // ===== T17 PART 2 END â search state + helpers =====
+  // ===== T17 PART 2 END — search state + helpers =====
 
   function renderWorkOrders() {
     const list = $('#wo-list');
@@ -2162,7 +2162,7 @@ $('#wof-add-other').addEventListener('click', () => {
     document.querySelectorAll('.wo-tab').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tab === state.activeWoTab);
     });
-    // Render only the active bucket â T17: apply search filter
+    // Render only the active bucket — T17: apply search filter
     const rawVisible = buckets[state.activeWoTab] || [];
     const visible = rawVisible.filter(woMatchesSearch);
     if (!visible.length) {
@@ -2195,7 +2195,7 @@ $('#wof-add-other').addEventListener('click', () => {
       el('div', { class: 'wo-meta' },
         el('span', { style: 'font-weight:700' }, `Status: ${(w.status || 'open').replace('_', ' ')}`),
         w.customerName ? el('span', { style: 'font-weight:700' }, `Customer: ${w.customerName}`) : null,
-        el('span', {}, `Assignee: ${w.assignee || 'â'}`),
+        el('span', {}, `Assignee: ${w.assignee || '—'}`),
         el('span', {}, `Created: ${fmtDate(w.createdAt)}`),
       ),
       w.description ? el('div', { class: 'wo-desc' }, w.description) : null,
@@ -2436,7 +2436,7 @@ function openWoForm(wo) {
 
     async function uploadOne(file, index, total) {
       progress.style.display = 'block';
-      progressLabel.textContent = `Uploading ${index + 1} of ${total}â¦`;
+      progressLabel.textContent = `Uploading ${index + 1} of ${total}…`;
       progressBar.style.width = '0%';
       return new Promise((resolve, reject) => {
         const fd = new FormData();
@@ -2506,7 +2506,7 @@ function openWoForm(wo) {
   const metaBits = [
     el('span', { class: `pill priority-${wo.priority || 'medium'}` }, wo.priority || 'medium'),
     el('span', {}, `Status: ${(wo.status || 'open').replace('_', ' ')}`),
-    el('span', {}, `Assignee: ${wo.assignee || 'â'}`),
+    el('span', {}, `Assignee: ${wo.assignee || '—'}`),
     el('span', {}, `Created: ${fmtDate(wo.createdAt)}`),
   ];
   if (wo.assignedAt) metaBits.push(el('span', {}, `Assigned: ${fmtDate(wo.assignedAt)}`));
@@ -2541,7 +2541,7 @@ function openWoForm(wo) {
     btn.addEventListener('click', () => changeWoStatus('in_progress'));
   }
   if (status === 'in_progress') {
-    const btn = el('button', { class: 'btn', id: 'wod-complete', type: 'button' }, 'â Mark Complete');
+    const btn = el('button', { class: 'btn', id: 'wod-complete', type: 'button' }, '✓ Mark Complete');
     actionBar.appendChild(btn);
     btn.addEventListener('click', () => changeWoStatus('completed'));
   }
@@ -2572,13 +2572,13 @@ function openWoForm(wo) {
     const cell = (label, val) => {
       grid.appendChild(el('div', {},
         el('div', { class: 'label' }, label),
-        el('div', { class: 'val' }, val || 'â'),
+        el('div', { class: 'val' }, val || '—'),
       ));
     };
     cell('Name', a.name);
     cell('Unit #', a.unitNumber);
     cell('Serial #', a.serialNumber);
-    cell('Hours', a.hours == null || a.hours === '' ? 'â' : String(a.hours));
+    cell('Hours', a.hours == null || a.hours === '' ? '—' : String(a.hours));
     cell('Make', a.make);
     cell('Model', a.model);
     assetSec.appendChild(grid);
@@ -2599,8 +2599,8 @@ function openWoForm(wo) {
     const tb = el('tbody');
     parts.forEach(p => {
       const tr = el('tr');
-      tr.appendChild(el('td', {}, p.partNumber || 'â'));
-      tr.appendChild(el('td', {}, p.description || 'â'));
+      tr.appendChild(el('td', {}, p.partNumber || '—'));
+      tr.appendChild(el('td', {}, p.description || '—'));
       tr.appendChild(el('td', { class: 'li-num' }, String(p.quantity ?? 0)));
       tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(p.unitCost)));
       tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(p.lineTotal)));
@@ -2612,7 +2612,7 @@ function openWoForm(wo) {
 
   // ---- Labor section with inline Add Labour ----
   const labor = wo.labor || [];
-  { const labourSec = el('div', { class: 'wo-section' }); const secHead = el('div', { class: 'wo-section-head', style: 'display:flex;align-items:center;justify-content:space-between;' }); secHead.appendChild(el('h4', {}, 'Labour')); const addLaborBtn = el('button', { type: 'button', class: 'btn btn-secondary btn-sm', style: 'margin-left:auto;' }, '+ Add Labour'); secHead.appendChild(addLaborBtn); labourSec.appendChild(secHead); if (labor.length) { const t = el('table', { class: 'li-readonly' }); const thead = el('thead'); const trh = el('tr'); ['Technician', 'Date', 'Hours', 'Rate', 'Notes', 'Line Total'].forEach((h, i) => { trh.appendChild(el('th', { class: (i >= 2 && i !== 4) ? 'li-num' : '' }, h)); }); thead.appendChild(trh); t.appendChild(thead); const tb = el('tbody'); labor.forEach(l => { const tr = el('tr'); tr.appendChild(el('td', {}, l.technician || 'â')); tr.appendChild(el('td', {}, l.date || 'â')); tr.appendChild(el('td', { class: 'li-num' }, String(l.hours ?? 0))); tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(l.hourlyRate))); tr.appendChild(el('td', {}, l.notes || '')); tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(l.lineTotal))); tb.appendChild(tr); }); t.appendChild(tb); labourSec.appendChild(t); } const addLaborForm = el('div', { class: 'add-labor-form', style: 'display:none;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:10px;' }); const LABOR_RATES_D = [{ label: 'Field', rate: 165 }, { label: 'Shop', rate: 145 }, { label: 'Fire', rate: 138 }, { label: 'Lube', rate: 138 }]; const fLblRow = (lbl, inp) => { const row = el('div', { style: 'display:flex;flex-direction:column;gap:3px;margin-bottom:8px;' }); row.appendChild(el('label', { style: 'font-size:12px;color:var(--muted);font-weight:600;' }, lbl)); row.appendChild(inp); return row; }; const inpSt = 'padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--panel));color:var(--fg);font-size:13px;width:100%;box-sizing:border-box;'; let techInp; if (isAdmin()) { techInp = document.createElement('select'); techInp.style.cssText = inpSt; const fillTech = (users) => { let o = '<option value="">â pick â</option>'; (users || []).forEach(u => { const s = escapeHtml(u.username || ''); o += '<option value="' + s + '">' + s + '</option>'; }); techInp.innerHTML = o; }; fillTech(usersLiteCache || []); ensureUsersLite().then(fillTech); } else { techInp = el('input', { type: 'text', style: inpSt }); techInp.value = currentUser ? (currentUser.displayName || currentUser.username || '') : ''; techInp.readOnly = true; techInp.style.opacity = '0.7'; } const dateInp2 = el('input', { type: 'date', style: inpSt }); dateInp2.value = new Date().toISOString().slice(0, 10); const hoursInp2 = el('input', { type: 'number', step: '0.25', min: '0', placeholder: '0', style: inpSt }); const rateInp2 = document.createElement('select'); rateInp2.style.cssText = inpSt; rateInp2.innerHTML = '<option value="">â select â</option>' + LABOR_RATES_D.map(r => '<option value="' + r.rate + '">' + r.label + ' ($' + r.rate + '/h)</option>').join(''); const notesInp2 = el('input', { type: 'text', placeholder: 'Optional notes', style: inpSt }); const fGrid = el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:0 12px;' }); fGrid.appendChild(fLblRow('Technician', techInp)); fGrid.appendChild(fLblRow('Date', dateInp2)); fGrid.appendChild(fLblRow('Hours', hoursInp2)); fGrid.appendChild(fLblRow('Rate', rateInp2)); fGrid.appendChild(fLblRow('Notes', notesInp2)); addLaborForm.appendChild(fGrid); const fBtns = el('div', { style: 'display:flex;gap:8px;justify-content:flex-end;margin-top:4px;' }); const cancelLaborBtn = el('button', { type: 'button', class: 'btn btn-secondary btn-sm' }, 'Cancel'); const saveLaborBtn = el('button', { type: 'button', class: 'btn btn-sm' }, 'Save Labour'); fBtns.appendChild(cancelLaborBtn); fBtns.appendChild(saveLaborBtn); addLaborForm.appendChild(fBtns); labourSec.appendChild(addLaborForm); addLaborBtn.addEventListener('click', () => { addLaborForm.style.display = addLaborForm.style.display === 'none' ? 'block' : 'none'; }); cancelLaborBtn.addEventListener('click', () => { addLaborForm.style.display = 'none'; }); saveLaborBtn.addEventListener('click', async () => { const tech = (techInp.value || '').trim(); const hrs = parseFloat(hoursInp2.value) || 0; const rate = parseFloat(rateInp2.value) || 0; if (!tech) { alert('Please select a technician.'); return; } if (!hrs) { alert('Please enter hours.'); return; } if (!rate) { alert('Please select a rate.'); return; } saveLaborBtn.disabled = true; saveLaborBtn.textContent = 'Savingâ¦'; try { const fresh = await apiFetch('/api/workorders/' + wo.id); const newEntry = { id: 'r_' + Math.random().toString(36).slice(2, 9), technician: tech, date: dateInp2.value || '', hours: hrs, hourlyRate: rate, notes: notesInp2.value.trim(), lineTotal: Math.round(hrs * rate * 100) / 100 }; const saved = await apiFetch('/api/workorders/' + wo.id, { method: 'PUT', body: JSON.stringify({ labor: (fresh.labor || []).concat([newEntry]) }) }); state.activeWO = saved; const wIdx = (state.workorders || []).findIndex(x => x.id === saved.id); if (wIdx !== -1) state.workorders[wIdx] = saved; renderWorkOrderDetail(); } catch (e) { alert('Save failed: ' + e.message); saveLaborBtn.disabled = false; saveLaborBtn.textContent = 'Save Labour'; } }); body.appendChild(labourSec); }
+  { const labourSec = el('div', { class: 'wo-section' }); const secHead = el('div', { class: 'wo-section-head', style: 'display:flex;align-items:center;justify-content:space-between;' }); secHead.appendChild(el('h4', {}, 'Labour')); const addLaborBtn = el('button', { type: 'button', class: 'btn btn-secondary btn-sm', style: 'margin-left:auto;' }, '+ Add Labour'); secHead.appendChild(addLaborBtn); labourSec.appendChild(secHead); if (labor.length) { const t = el('table', { class: 'li-readonly' }); const thead = el('thead'); const trh = el('tr'); ['Technician', 'Date', 'Hours', 'Rate', 'Notes', 'Line Total'].forEach((h, i) => { trh.appendChild(el('th', { class: (i >= 2 && i !== 4) ? 'li-num' : '' }, h)); }); thead.appendChild(trh); t.appendChild(thead); const tb = el('tbody'); labor.forEach(l => { const tr = el('tr'); tr.appendChild(el('td', {}, l.technician || '—')); tr.appendChild(el('td', {}, l.date || '—')); tr.appendChild(el('td', { class: 'li-num' }, String(l.hours ?? 0))); tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(l.hourlyRate))); tr.appendChild(el('td', {}, l.notes || '')); tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(l.lineTotal))); tb.appendChild(tr); }); t.appendChild(tb); labourSec.appendChild(t); } const addLaborForm = el('div', { class: 'add-labor-form', style: 'display:none;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:10px;' }); const LABOR_RATES_D = [{ label: 'Field', rate: 165 }, { label: 'Shop', rate: 145 }, { label: 'Fire', rate: 138 }, { label: 'Lube', rate: 138 }]; const fLblRow = (lbl, inp) => { const row = el('div', { style: 'display:flex;flex-direction:column;gap:3px;margin-bottom:8px;' }); row.appendChild(el('label', { style: 'font-size:12px;color:var(--muted);font-weight:600;' }, lbl)); row.appendChild(inp); return row; }; const inpSt = 'padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--panel));color:var(--fg);font-size:13px;width:100%;box-sizing:border-box;'; let techInp; if (isAdmin()) { techInp = document.createElement('select'); techInp.style.cssText = inpSt; const fillTech = (users) => { let o = '<option value="">— pick —</option>'; (users || []).forEach(u => { const s = escapeHtml(u.username || ''); o += '<option value="' + s + '">' + s + '</option>'; }); techInp.innerHTML = o; }; fillTech(usersLiteCache || []); ensureUsersLite().then(fillTech); } else { techInp = el('input', { type: 'text', style: inpSt }); techInp.value = currentUser ? (currentUser.displayName || currentUser.username || '') : ''; techInp.readOnly = true; techInp.style.opacity = '0.7'; } const dateInp2 = el('input', { type: 'date', style: inpSt }); dateInp2.value = new Date().toISOString().slice(0, 10); const hoursInp2 = el('input', { type: 'number', step: '0.25', min: '0', placeholder: '0', style: inpSt }); const rateInp2 = document.createElement('select'); rateInp2.style.cssText = inpSt; rateInp2.innerHTML = '<option value="">— select —</option>' + LABOR_RATES_D.map(r => '<option value="' + r.rate + '">' + r.label + ' ($' + r.rate + '/h)</option>').join(''); const notesInp2 = el('input', { type: 'text', placeholder: 'Optional notes', style: inpSt }); const fGrid = el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:0 12px;' }); fGrid.appendChild(fLblRow('Technician', techInp)); fGrid.appendChild(fLblRow('Date', dateInp2)); fGrid.appendChild(fLblRow('Hours', hoursInp2)); fGrid.appendChild(fLblRow('Rate', rateInp2)); fGrid.appendChild(fLblRow('Notes', notesInp2)); addLaborForm.appendChild(fGrid); const fBtns = el('div', { style: 'display:flex;gap:8px;justify-content:flex-end;margin-top:4px;' }); const cancelLaborBtn = el('button', { type: 'button', class: 'btn btn-secondary btn-sm' }, 'Cancel'); const saveLaborBtn = el('button', { type: 'button', class: 'btn btn-sm' }, 'Save Labour'); fBtns.appendChild(cancelLaborBtn); fBtns.appendChild(saveLaborBtn); addLaborForm.appendChild(fBtns); labourSec.appendChild(addLaborForm); addLaborBtn.addEventListener('click', () => { addLaborForm.style.display = addLaborForm.style.display === 'none' ? 'block' : 'none'; }); cancelLaborBtn.addEventListener('click', () => { addLaborForm.style.display = 'none'; }); saveLaborBtn.addEventListener('click', async () => { const tech = (techInp.value || '').trim(); const hrs = parseFloat(hoursInp2.value) || 0; const rate = parseFloat(rateInp2.value) || 0; if (!tech) { alert('Please select a technician.'); return; } if (!hrs) { alert('Please enter hours.'); return; } if (!rate) { alert('Please select a rate.'); return; } saveLaborBtn.disabled = true; saveLaborBtn.textContent = 'Saving…'; try { const fresh = await apiFetch('/api/workorders/' + wo.id); const newEntry = { id: 'r_' + Math.random().toString(36).slice(2, 9), technician: tech, date: dateInp2.value || '', hours: hrs, hourlyRate: rate, notes: notesInp2.value.trim(), lineTotal: Math.round(hrs * rate * 100) / 100 }; const saved = await apiFetch('/api/workorders/' + wo.id, { method: 'PUT', body: JSON.stringify({ labor: (fresh.labor || []).concat([newEntry]) }) }); state.activeWO = saved; const wIdx = (state.workorders || []).findIndex(x => x.id === saved.id); if (wIdx !== -1) state.workorders[wIdx] = saved; renderWorkOrderDetail(); } catch (e) { alert('Save failed: ' + e.message); saveLaborBtn.disabled = false; saveLaborBtn.textContent = 'Save Labour'; } }); body.appendChild(labourSec); }
 
   // ---- Other Costs table (read-only) ----
   const other = wo.otherCosts || [];
@@ -2628,7 +2628,7 @@ function openWoForm(wo) {
     const tb = el('tbody');
     other.forEach(o => {
       const tr = el('tr');
-      tr.appendChild(el('td', {}, o.description || 'â'));
+      tr.appendChild(el('td', {}, o.description || '—'));
       tr.appendChild(el('td', { class: 'li-num' }, fmtCAD(o.amount)));
       tb.appendChild(tr);
     });
@@ -2649,7 +2649,7 @@ function openWoForm(wo) {
     body.appendChild(card);
   }
 
-  { const notesSec=el('div',{class:'wo-section',id:'wo-notes-section'}); notesSec.appendChild(el('div',{class:'wo-section-head'},el('h4',{},'Notes'))); const notesFeed=el('div',{class:'notes-feed',style:'max-height:260px;overflow-y:auto;margin-bottom:10px;'}); const renderNotes=()=>{ notesFeed.innerHTML=''; const labourTotal=fmtCAD((wo.totals&&wo.totals.labor)||0); const hasMoney=(wo.labor||[]).length>0; if(hasMoney){ const lt=el('div',{class:'notes-labour-summary',style:'background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:13px;'},el('span',{style:'color:var(--muted)'},'Labour Total: '),el('span',{style:'font-weight:700'},labourTotal)); notesFeed.appendChild(lt); } (wo.notes||[]).slice().reverse().forEach(n=>{ const d=el('div',{class:'note-entry',style:'padding:8px 0;border-bottom:1px solid var(--border);'}); d.appendChild(el('div',{style:'font-size:13px;white-space:pre-wrap;word-break:break-word;'},n.text)); d.appendChild(el('div',{style:'font-size:11px;color:var(--muted);margin-top:3px;'},(n.author||'')+(n.createdAt?' â '+fmtDate(n.createdAt):''))); notesFeed.appendChild(d); }); if(!(wo.notes&&wo.notes.length)&&!hasMoney) notesFeed.appendChild(el('div',{class:'empty',style:'padding:8px 0;'},'No notes yet.')); }; renderNotes(); notesSec.appendChild(notesFeed); const noteInput=el('textarea',{placeholder:'Add a noteâ¦',style:'width:100%;box-sizing:border-box;min-height:60px;resize:vertical;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--panel));color:var(--fg);font-size:13px;margin-bottom:6px;'}); const noteBtn=el('button',{type:'button',class:'btn btn-secondary btn-sm'},'Add Note'); noteBtn.addEventListener('click',async()=>{ const t=noteInput.value.trim(); if(!t)return; try{ const note=await apiFetch('/api/workorders/'+wo.id+'/notes',{method:'POST',body:JSON.stringify({text:t})}); if(!Array.isArray(wo.notes))wo.notes=[]; wo.notes.push(note); noteInput.value=''; renderNotes(); }catch(e){alert('Save failed: '+e.message);} }); notesSec.appendChild(noteInput); notesSec.appendChild(noteBtn); body.appendChild(notesSec); }// ---- Photos card (T-photos) ----
+  { const notesSec=el('div',{class:'wo-section',id:'wo-notes-section'}); notesSec.appendChild(el('div',{class:'wo-section-head'},el('h4',{},'Notes'))); const notesFeed=el('div',{class:'notes-feed',style:'max-height:260px;overflow-y:auto;margin-bottom:10px;'}); const renderNotes=()=>{ notesFeed.innerHTML=''; const labourTotal=fmtCAD((wo.totals&&wo.totals.labor)||0); const hasMoney=(wo.labor||[]).length>0; if(hasMoney){ const lt=el('div',{class:'notes-labour-summary',style:'background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:13px;'},el('span',{style:'color:var(--muted)'},'Labour Total: '),el('span',{style:'font-weight:700'},labourTotal)); notesFeed.appendChild(lt); } (wo.notes||[]).slice().reverse().forEach(n=>{ const d=el('div',{class:'note-entry',style:'padding:8px 0;border-bottom:1px solid var(--border);'}); d.appendChild(el('div',{style:'font-size:13px;white-space:pre-wrap;word-break:break-word;'},n.text)); d.appendChild(el('div',{style:'font-size:11px;color:var(--muted);margin-top:3px;'},(n.author||'')+(n.createdAt?' — '+fmtDate(n.createdAt):''))); notesFeed.appendChild(d); }); if(!(wo.notes&&wo.notes.length)&&!hasMoney) notesFeed.appendChild(el('div',{class:'empty',style:'padding:8px 0;'},'No notes yet.')); }; renderNotes(); notesSec.appendChild(notesFeed); const noteInput=el('textarea',{placeholder:'Add a note…',style:'width:100%;box-sizing:border-box;min-height:60px;resize:vertical;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--panel));color:var(--fg);font-size:13px;margin-bottom:6px;'}); const noteBtn=el('button',{type:'button',class:'btn btn-secondary btn-sm'},'Add Note'); noteBtn.addEventListener('click',async()=>{ const t=noteInput.value.trim(); if(!t)return; try{ const note=await apiFetch('/api/workorders/'+wo.id+'/notes',{method:'POST',body:JSON.stringify({text:t})}); if(!Array.isArray(wo.notes))wo.notes=[]; wo.notes.push(note); noteInput.value=''; renderNotes(); }catch(e){alert('Save failed: '+e.message);} }); notesSec.appendChild(noteInput); notesSec.appendChild(noteBtn); body.appendChild(notesSec); }// ---- Photos card (T-photos) ----
   {
     const photosCard = el('div', { class: 'wo-section' });
     photosCard.appendChild(el('div', { class: 'wo-section-head' }, el('h4', {}, 'Photos')));
@@ -2698,7 +2698,7 @@ function openWoForm(wo) {
     } catch (err) { alert('Delete failed: ' + err.message); }
   });
 
-  // ââââââââââ Ticket 20: tab clicks + lifecycle helper ââââââââââ
+  // ━━━━━━━━━━ Ticket 20: tab clicks + lifecycle helper ━━━━━━━━━━
   document.querySelectorAll('.wo-tab').forEach(btn => {
       btn.addEventListener('click', () => {
         state.activeWoTab = btn.dataset.tab;
@@ -2706,7 +2706,7 @@ function openWoForm(wo) {
       });
     });
 
-    // ===== T17 PART 2 â search wiring =====
+    // ===== T17 PART 2 — search wiring =====
     const scopeSel = document.getElementById('wo-search-scope');
     const textInput = document.getElementById('wo-search-text');
     const statusSel = document.getElementById('wo-search-status');
@@ -2725,8 +2725,8 @@ function openWoForm(wo) {
         textInput.style.display = 'block';
         statusSel.style.display = 'none';
         textInput.placeholder = scope === 'customer'
-          ? 'Type a customer nameâ¦'
-          : 'Type asset name, serial, or unit #â¦';
+          ? 'Type a customer name…'
+          : 'Type asset name, serial, or unit #…';
       }
       updateClearBtnVisibility();
     }
@@ -2898,7 +2898,7 @@ function openWoForm(wo) {
         el('button', { class: 'btn btn-secondary btn-sm', onclick: async () => {
           try { await apiFetch(`/api/workorders/${wo.id}/procedures/${inst.instanceId}`, { method: 'PATCH', body: JSON.stringify({ status: 'complete' }) }); await refreshAll(); }
           catch (e) { alert('Mark complete failed: ' + e.message); }
-        }}, inst.completedAt ? `â Completed ${fmtDate(inst.completedAt)}` : 'Mark Complete'),
+        }}, inst.completedAt ? `✓ Completed ${fmtDate(inst.completedAt)}` : 'Mark Complete'),
         el('button', { class: 'btn btn-danger btn-sm', onclick: async () => {
           if (!confirm('Detach this procedure?')) return;
           try { await apiFetch(`/api/workorders/${wo.id}/procedures/${inst.instanceId}`, { method: 'DELETE' }); await refreshAll(); }
@@ -2985,7 +2985,7 @@ function openWoForm(wo) {
         const status = el('span', { class: 'photo-status' });
         fileInp.addEventListener('change', async () => {
           const file = fileInp.files[0]; if (!file) return;
-          status.textContent = 'Resizingâ¦';
+          status.textContent = 'Resizing…';
           try {
             const dataUrl = await resizeImage(file);
             preview.innerHTML = '';
@@ -3229,7 +3229,7 @@ function openWoForm(wo) {
   $('#ai-generate').addEventListener('click', async () => {
     const prompt = $('#ai-prompt').value.trim();
     if (!prompt) { $('#ai-status').textContent = 'Please describe the procedure first.'; return; }
-    $('#ai-status').textContent = 'Generatingâ¦';
+    $('#ai-status').textContent = 'Generating…';
     $('#ai-generate').disabled = true;
     try {
       const result = await apiFetch('/api/procedures/generate', {
@@ -3361,7 +3361,7 @@ function openWoForm(wo) {
     // Fallback: pretty key:value pairs
     return Object.entries(inp).map(([k, v]) =>
       `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`
-    ).join('  Â·  ');
+    ).join('  ·  ');
   }
 
   const TOOL_LABELS = {
@@ -3371,7 +3371,7 @@ function openWoForm(wo) {
 
   function renderConfirmationCard(pc) {
     const card = el('div', { class: 'chat-confirm-card' });
-    card.appendChild(el('div', { class: 'chat-confirm-title' }, 'â ï¸ Confirm destructive action'));
+    card.appendChild(el('div', { class: 'chat-confirm-title' }, '⚠️ Confirm destructive action'));
     card.appendChild(el('div', { class: 'chat-confirm-tool' }, TOOL_LABELS[pc.name] || pc.name));
     const summary = friendlySummary(pc);
     if (summary) card.appendChild(el('div', { class: 'chat-confirm-input' }, summary));
@@ -3534,7 +3534,7 @@ function renderUsers() {
     const tr = el('tr');
     const isMe = currentUser && u.id === currentUser.id;
     tr.appendChild(el('td', {}, u.username, isMe ? el('span', { class: 'you-tag' }, '(you)') : null));
-    tr.appendChild(el('td', {}, u.displayName || 'â'));
+    tr.appendChild(el('td', {}, u.displayName || '—'));
     tr.appendChild(el('td', {}, el('span', { class: 'user-role-pill role-' + u.role }, u.role)));
     tr.appendChild(el('td', {}, fmtDate(u.createdAt)));
     const actions = el('div', { class: 'users-actions' });
@@ -3637,7 +3637,7 @@ refreshAll = async function() {
 function populateWofCustomers(selectedId) {
   const sel = $('#wof-customer-select');
   if (!sel) return;
-  const opts = ['<option value="">â select customer â</option>'];
+  const opts = ['<option value="">— select customer —</option>'];
   customersCache.forEach((c) => {
     opts.push(`<option value="${c.id}">${escapeHtml(c.name)}</option>`);
   });
@@ -3650,7 +3650,7 @@ function populateWofAssets(customerId, selectedAssetId) {
   const hint = $('#wof-asset-hint');
   if (!sel) return;
   if (!customerId) {
-    sel.innerHTML = '<option value="">â pick a customer first â</option>';
+    sel.innerHTML = '<option value="">— pick a customer first —</option>';
     sel.disabled = true;
     if (hint) hint.textContent = 'Select a customer first to see their assets.';
     return;
@@ -3658,11 +3658,11 @@ function populateWofAssets(customerId, selectedAssetId) {
   sel.disabled = false;
   const filtered = assetsCache.filter((a) => a.customerId === customerId);
   if (!filtered.length) {
-    sel.innerHTML = '<option value="">â no assets â click "+ New" to add one â</option>';
+    sel.innerHTML = '<option value="">— no assets — click "+ New" to add one —</option>';
     if (hint) hint.textContent = 'This customer has no assets. Click "+ New" to add one.';
     return;
   }
-  const opts = ['<option value="">â select asset â</option>'];
+  const opts = ['<option value="">— select asset —</option>'];
   filtered.forEach((a) => {
     const label = `${a.name}${a.unitNumber ? ' (' + a.unitNumber + ')' : ''}`;
     opts.push(`<option value="${a.id}">${escapeHtml(label)}</option>`);
@@ -3687,11 +3687,11 @@ function refreshWofAssetSummary() {
   if (a.serialNumber) bits.push(`SN: ${a.serialNumber}`);
   if (a.unitNumber) bits.push(`Unit: ${a.unitNumber}`);
   if (a.currentHours != null) bits.push(`Current: ${a.currentHours}h`);
-  summary.textContent = bits.length ? bits.join(' â¢ ') : 'No additional details.';
+  summary.textContent = bits.length ? bits.join(' • ') : 'No additional details.';
   summary.style.display = '';
 }
 
-// Wire up customer-change â reload asset dropdown + clear hours snapshot
+// Wire up customer-change → reload asset dropdown + clear hours snapshot
 document.addEventListener('change', (ev) => {
   if (ev.target && ev.target.id === 'wof-customer-select') {
     populateWofAssets(ev.target.value, '');
@@ -3716,7 +3716,7 @@ $('#wof-new-customer-btn') && $('#wof-new-customer-btn').addEventListener('click
     populateWofAssets(newCustomer.id, '');
     refreshWofAssetSummary();
   };
-  // Override the customer save handler temporarily â simpler: use a one-shot listener
+  // Override the customer save handler temporarily — simpler: use a one-shot listener
   const origSave = $('#cf-save').onclick;
   // We use an MutationObserver-free approach: just refresh and let user re-pick.
   // Open the customer modal in "new" mode
@@ -3746,7 +3746,7 @@ $('#wof-new-asset-btn') && $('#wof-new-asset-btn').addEventListener('click', () 
   // Pre-select the WO form's current customer in the asset modal
   const afCustomer = $('#af-customer');
   if (afCustomer) afCustomer.value = cid;
-  // Watch for modal close â refresh + select
+  // Watch for modal close → refresh + select
   const modal = $('#asset-form-modal');
   const observer = new MutationObserver(async () => {
     if (!modal.classList.contains('show')) {
@@ -3816,7 +3816,7 @@ function renderCustomers() {
       <tr>
         <td><strong>${escapeHtml(c.name)}</strong></td>
         <td>${assetCount}</td>
-        <td style="color:var(--muted); font-size:13px;">${escapeHtml((c.notes || '').slice(0, 80))}${(c.notes || '').length > 80 ? 'â¦' : ''}</td>
+        <td style="color:var(--muted); font-size:13px;">${escapeHtml((c.notes || '').slice(0, 80))}${(c.notes || '').length > 80 ? '…' : ''}</td>
         <td><button class="btn btn-secondary btn-sm" data-edit-customer="${c.id}">Edit</button></td>
       </tr>`;
   }).join('');
@@ -3842,11 +3842,11 @@ function renderAssets() {
     return `
       <tr>
         <td><strong>${escapeHtml(a.name)}</strong></td>
-        <td>${escapeHtml(cust ? cust.name : 'â unknown â')}</td>
+        <td>${escapeHtml(cust ? cust.name : '— unknown —')}</td>
         <td>${escapeHtml(a.make || '')} ${escapeHtml(a.model || '')}</td>
         <td>${escapeHtml(a.serialNumber || '')}</td>
         <td>${escapeHtml(a.unitNumber || '')}</td>
-        <td>${a.currentHours == null ? 'â' : a.currentHours}</td>
+        <td>${a.currentHours == null ? '—' : a.currentHours}</td>
         <td><button class="btn btn-secondary btn-sm" data-edit-asset="${a.id}">Edit</button></td>
       </tr>`;
   }).join('');
@@ -3917,7 +3917,7 @@ function openAssetForm(id) {
   const sel = $('#af-customer');
   sel.innerHTML = customersCache.length
     ? customersCache.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
-    : '<option value="">â No customers â create one first â</option>';
+    : '<option value="">— No customers — create one first —</option>';
   if (a) sel.value = a.customerId;
   $('#af-name').value = a ? a.name : '';
   $('#af-make').value = a ? (a.make || '') : '';
@@ -4027,7 +4027,7 @@ setView = function(v) {
 
 
 // ============================================================
-// Ticket 12: Templates â state, list rendering, form CRUD
+// Ticket 12: Templates — state, list rendering, form CRUD
 // ============================================================
 let _templatesCache = [];
 let editingTemplateId = null;
@@ -4051,9 +4051,9 @@ function renderTemplatesList() {
   }
   const isAdmin = currentUser && currentUser.role === 'admin';
   const rows = _templatesCache.map(t => {
-    const cu = t.customerId ? (customersCache.find(c => c.id === t.customerId) || {}).name || 'â' : 'Any';
-    const as = t.assetId ? (assetsCache.find(a => a.id === t.assetId) || {}).name || 'â' : 'Any';
-    const wt = t.workType || 'â';
+    const cu = t.customerId ? (customersCache.find(c => c.id === t.customerId) || {}).name || '—' : 'Any';
+    const as = t.assetId ? (assetsCache.find(a => a.id === t.assetId) || {}).name || '—' : 'Any';
+    const wt = t.workType || '—';
     const partsCount = (t.parts || []).length;
     const editBtn = isAdmin ? `<button class="btn btn-secondary btn-sm" data-edit-template="${t.id}">Edit</button>` : '';
     return `<tr>
@@ -4094,7 +4094,7 @@ function openTemplateForm(templateId) {
 function populateTfCustomers(selectedId) {
   const sel = $('#tf-customer');
   if (!sel) return;
-  const opts = ['<option value="">â any customer â</option>'].concat(
+  const opts = ['<option value="">— any customer —</option>'].concat(
     customersCache.map(c => `<option value="${c.id}"${c.id === selectedId ? ' selected' : ''}>${escapeHtml(c.name)}</option>`)
   );
   sel.innerHTML = opts.join('');
@@ -4104,7 +4104,7 @@ function populateTfAssets(customerId, selectedAssetId) {
   const sel = $('#tf-asset');
   if (!sel) return;
   const filtered = customerId ? assetsCache.filter(a => a.customerId === customerId) : assetsCache.slice();
-  const opts = ['<option value="">â any asset â</option>'].concat(
+  const opts = ['<option value="">— any asset —</option>'].concat(
     filtered.map(a => `<option value="${a.id}"${a.id === selectedAssetId ? ' selected' : ''}>${escapeHtml(a.name)}${a.unitNumber ? ' (' + escapeHtml(a.unitNumber) + ')' : ''}</option>`)
   );
   sel.innerHTML = opts.join('');
@@ -4250,7 +4250,7 @@ function applyTemplateAdminVisibility() {
     }
   });
 }
-// Re-apply on auth changes â bootAuth runs synchronously below, then refreshAll
+// Re-apply on auth changes — bootAuth runs synchronously below, then refreshAll
 const _origApplyRoleVis = (typeof applyRoleVisibility === 'function') ? applyRoleVisibility : null;
 if (_origApplyRoleVis) {
   applyRoleVisibility = function() {
@@ -4262,7 +4262,7 @@ if (_origApplyRoleVis) {
   setTimeout(applyTemplateAdminVisibility, 500);
 }
 // ============================================================
-// Ticket 12: Template picker â "Create from Template" on WO form
+// Ticket 12: Template picker — "Create from Template" on WO form
 // ============================================================
 
 // Open the template picker modal
@@ -4271,21 +4271,21 @@ function openTemplatePicker() {
   if (!list) return;
   if (!_templatesCache.length) {
     list.innerHTML = '<div style="color:var(--muted); padding:24px; text-align:center;">No templates available. ' +
-      (currentUser && currentUser.role === 'admin' ? 'Go to Templates â "+ New Template" to create one.' : 'An admin can create templates.') +
+      (currentUser && currentUser.role === 'admin' ? 'Go to Templates → "+ New Template" to create one.' : 'An admin can create templates.') +
       '</div>';
   } else {
     list.innerHTML = _templatesCache.map(t => {
-      const wt = t.workType || 'â';
+      const wt = t.workType || '—';
       const cu = t.customerId ? (customersCache.find(c => c.id === t.customerId) || {}).name || '' : '';
       const as = t.assetId ? (assetsCache.find(a => a.id === t.assetId) || {}).name || '' : '';
-      const meta = [wt, cu && 'Customer: ' + cu, as && 'Asset: ' + as].filter(Boolean).join(' â¢ ');
+      const meta = [wt, cu && 'Customer: ' + cu, as && 'Asset: ' + as].filter(Boolean).join(' • ');
       const partsCount = (t.parts || []).length;
       return `<div class="card" style="padding:12px; margin-bottom:8px; cursor:pointer;" data-pick-template="${t.id}">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
             <strong>${escapeHtml(t.name)}</strong>
             ${t.description ? '<div style="color:var(--muted); font-size:12px; margin-top:2px;">' + escapeHtml(t.description) + '</div>' : ''}
-            <div style="color:var(--muted); font-size:12px; margin-top:4px;">${escapeHtml(meta)}${partsCount ? ' â¢ ' + partsCount + ' part(s)' : ''}</div>
+            <div style="color:var(--muted); font-size:12px; margin-top:4px;">${escapeHtml(meta)}${partsCount ? ' • ' + partsCount + ' part(s)' : ''}</div>
           </div>
           <button class="btn btn-sm" data-pick-template="${t.id}">Use</button>
         </div>
