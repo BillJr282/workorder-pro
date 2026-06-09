@@ -787,12 +787,14 @@ app.get("/api/procedures/:id", (req, res) => {
 
 app.post("/api/procedures", (req, res) => {
   const data = loadData();
-  const { name, description, fields } = req.body || {};
+  const { name, description, fields, category, subcategory } = req.body || {};
   if (!name) return res.status(400).json({ error: "name required" });
   const p = {
     id: uuidv4(),
     name,
     description: description || "",
+    category: category || "",
+    subcategory: subcategory || "",
     fields: Array.isArray(fields) ? fields.map(normalizeField) : [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -806,9 +808,11 @@ app.put("/api/procedures/:id", (req, res) => {
   const data = loadData();
   const p = data.procedures.find((x) => x.id === req.params.id);
   if (!p) return res.status(404).json({ error: "Not found" });
-  const { name, description, fields } = req.body || {};
+  const { name, description, fields, category, subcategory } = req.body || {};
   if (name !== undefined) p.name = name;
   if (description !== undefined) p.description = description;
+  if (category !== undefined) p.category = category;
+  if (subcategory !== undefined) p.subcategory = subcategory;
   if (fields !== undefined && Array.isArray(fields)) p.fields = fields.map(normalizeField);
   p.updatedAt = new Date().toISOString();
   saveData(data);
