@@ -1688,7 +1688,7 @@ const isAdmin = () => currentUser && currentUser.role === 'admin';
     }
     for (const c of children.flat()) {
       if (c == null || c === false) continue;
-      node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+      if(typeof c==='string'&&c.trimStart().startsWith('<svg')){const _t=document.createElement('span');_t.innerHTML=c;node.appendChild(_t.firstChild||_t);}else{node.appendChild(typeof c==='string'?document.createTextNode(c):c);}
     }
     return node;
   }
@@ -4363,7 +4363,7 @@ function injectCreateFromTemplateBtn() {
   btn.id = 'cft-btn';
   btn.className = 'btn btn-secondary';
   btn.style.marginRight = '8px';
-  btn.textContent = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> From Template';
+  btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> From Template';
   btn.addEventListener('click', async () => {
     // Open new WO form first, then layer the picker on top so applyTemplateToWoForm has a target
     if (typeof openWoForm === 'function') {
