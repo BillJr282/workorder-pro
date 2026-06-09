@@ -2934,7 +2934,7 @@ function openWoForm(wo) {
           if (current === opt) o.selected = true;
           sel.appendChild(o);
         });
-        sel.addEventListener('change', () => { save(sel.value || null); renderWorkOrderDetail(); });
+        sel.addEventListener('change', () => { inst.responses = inst.responses || {}; inst.responses[f.id] = sel.value || null; save(sel.value || null); renderWorkOrderDetail(); });
         row.appendChild(sel);
       } else if (f.type === 'number') {
         const inp = el('input', { type: 'number' });
@@ -2947,7 +2947,7 @@ function openWoForm(wo) {
           const id = `pf-${inst.instanceId}-${f.id}-${opt}`;
           const r = el('input', { type: 'radio', name: `pf-${inst.instanceId}-${f.id}`, id, value: opt });
           if (current === opt) r.checked = true;
-          r.addEventListener('change', () => { save(opt); renderWorkOrderDetail(); });
+          r.addEventListener('change', () => { inst.responses = inst.responses || {}; inst.responses[f.id] = opt; save(opt); renderWorkOrderDetail(); });
           group.appendChild(r);
           group.appendChild(el('label', { for: id, class: `pf-${opt.replace('/','')}` }, opt.toUpperCase()));
         });
