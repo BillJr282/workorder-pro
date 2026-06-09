@@ -1028,6 +1028,14 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
     margin-bottom: 3px;
   }
   .attach-item-indented { margin-left: 16px; }
+
+  /* ===== Collapsible WO form sections ===== */
+  .wo-section-collapsible { cursor: pointer; user-select: none; }
+  .wo-section-collapsible:hover { background: var(--panel-2); border-radius: 4px; }
+  .wo-sec-chevron { font-size: 10px; color: var(--muted); margin-right: 4px; transition: transform 0.2s; display:inline-block; }
+  .wo-section-collapsible.open .wo-sec-chevron { transform: rotate(90deg); }
+  /* ===== Single-column procedures ===== */
+  #proc-list { display: block !important; }
 </style>
 </head>
 <body>
@@ -1133,6 +1141,8 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
           <label class="wo-search-label" for="wo-search-scope">Search by:</label>
           <select id="wo-search-scope" class="wo-search-scope">
             <option value="customer">Customer</option>
+            <option value="title">Title</option>
+            <option value="assignee">Assignee</option>
             <option value="asset">Asset</option>
             <option value="status">Status</option>
           </select>
@@ -1267,7 +1277,7 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
       </div>
       <div class="field-row">
   <label>Assignee</label>
-  <input id="wof-assignee" type="text" />
+  <input id="wof-assignee" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--text);font-size:14px;"><option value="">-- Unassigned --</option></select>
 </div>
 <!-- ============ T21: Scheduling ============ -->
 <div class="field-row">
@@ -1319,10 +1329,12 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
 
 <!-- ============ Parts ============ -->
 <div class="wo-section">
-  <div class="wo-section-head">
+  <div class="wo-section-head wo-section-collapsible" data-target="wof-parts-wrap" id="wof-parts-head">
+    <span class="wo-sec-chevron">&#9654;</span>
     <h4>Parts</h4>
-    <button type="button" class="btn btn-secondary wo-section-add" id="wof-add-part">+ Add part</button>
+    <button type="button" class="btn btn-secondary wo-section-add" id="wof-add-part" onclick="event.stopPropagation()">+ Add part</button>
   </div>
+  <div id="wof-parts-wrap" style="display:none">
   <table class="li-table">
     <thead>
       <tr>
@@ -1337,13 +1349,16 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
     <tbody id="wof-parts-body"></tbody>
   </table>
 </div>
+</div>
 
 <!-- ============ Labor ============ -->
 <div class="wo-section">
-  <div class="wo-section-head">
+  <div class="wo-section-head wo-section-collapsible" data-target="wof-labor-wrap" id="wof-labor-head">
+    <span class="wo-sec-chevron">&#9654;</span>
     <h4>Labor</h4>
-    <button type="button" class="btn btn-secondary wo-section-add" id="wof-add-labor">+ Add labor</button>
+    <button type="button" class="btn btn-secondary wo-section-add" id="wof-add-labor" onclick="event.stopPropagation()">+ Add labor</button>
   </div>
+  <div id="wof-labor-wrap" style="display:none">
   <table class="li-table">
     <thead>
       <tr>
@@ -1358,6 +1373,7 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
     </thead>
     <tbody id="wof-labor-body"></tbody>
   </table>
+</div>
 </div>
 
 <!-- ============ Other Costs ============ -->
@@ -2163,12 +2179,33 @@ function renderWofOther() {
 }
 
 // + Add row buttons (wired once at module load)
+// ===== Collapsible WO form sections =====
+document.addEventListener('click', function(e) {
+  const head = e.target.closest('.wo-section-collapsible');
+  if (!head) return;
+  const tId = head.dataset.target;
+  const wrap = document.getElementById(tId);
+  if (!wrap) return;
+  const wasOpen = head.classList.contains('open');
+  head.classList.toggle('open', !wasOpen);
+  wrap.style.display = wasOpen ? 'none' : 'block';
+});
+function expandWoSection(hId, wId) {
+  const head = document.getElementById(hId);
+  const wrap = document.getElementById(wId);
+  if (!wrap || !head) return;
+  head.classList.add('open');
+  wrap.style.display = 'block';
+}
+
 $('#wof-add-part').addEventListener('click', () => {
+  expandWoSection('wof-parts-head','wof-parts-wrap');
   woFormEdit.parts.push({ id: newRowId(), partNumber: '', description: '', quantity: 0, unitCost: 0, lineTotal: 0 });
   renderWofParts();
   recomputeWofTotals();
 });
 $('#wof-add-labor').addEventListener('click', () => {
+  expandWoSection('wof-labor-head','wof-labor-wrap');
   woFormEdit.labor.push({ id: newRowId(), technician: '', date: '', hours: 0, hourlyRate: 0, lineTotal: 0 });
   renderWofLabor();
   recomputeWofTotals();
@@ -2203,6 +2240,12 @@ $('#wof-add-other').addEventListener('click', () => {
     if (woSearch.scope === 'customer') {
       const hay = (w.customerName || '').toLowerCase();
       return hay.includes(needle);
+    }
+    if (woSearch.scope === 'title') {
+      return (w.title || '').toLowerCase().includes(needle);
+    }
+    if (woSearch.scope === 'assignee') {
+      return (w.assignee || '').toLowerCase().includes(needle);
     }
     if (woSearch.scope === 'asset') {
       const a = w.asset || {};
@@ -2257,19 +2300,31 @@ $('#wof-add-other').addEventListener('click', () => {
       }
       return;
     }
-    const renderWoCard = (w) => el('div', { class: `card wo-card priority-${w.priority || 'medium'}`, onclick: () => openWorkOrder(w.id) },
-      el('div', { class: 'wo-card-header' },
-        el('div', { class: 'wo-title', style: 'font-weight:700' }, w.title || '(untitled)'),
-        el('span', { class: `pill priority-${w.priority || 'medium'}` }, w.priority || 'medium'),
-      ),
-      el('div', { class: 'wo-meta' },
-        el('span', { style: 'font-weight:700' }, `Status: ${(w.status || 'open').replace('_', ' ')}`),
-        w.customerName ? el('span', { style: 'font-weight:700' }, `Customer: ${w.customerName}`) : null,
-        el('span', {}, `Assignee: ${w.assignee || '—'}`),
-        el('span', {}, `Created: ${fmtDate(w.createdAt)}`),
-      ),
-      w.description ? el('div', { class: 'wo-desc' }, w.description) : null,
-    );
+    const renderWoCard = (w) => {
+      const assetName = w.asset ? (w.asset.name||'') : '';
+      const procCount = (w.procedures||[]).length;
+      const createdMs = w.createdAt ? new Date(w.createdAt).getTime() : 0;
+      const agedays = createdMs ? Math.floor((Date.now()-createdMs)/86400000) : 0;
+      const ageColor = agedays>=14?'#dc2626':agedays>=7?'#d97706':'var(--muted)';
+      return el('div', { class: `card wo-card priority-${w.priority||'medium'}`, onclick: () => openWorkOrder(w.id) },
+        el('div', { class: 'wo-card-header' },
+          el('div', { class: 'wo-title', style: 'font-weight:700' }, w.title||'(untitled)'),
+          el('div', { style: 'display:flex;gap:4px;align-items:center;flex-shrink:0' },
+            el('span', { class: `pill priority-${w.priority||'medium'}` }, w.priority||'medium'),
+            procCount ? el('span', { class: 'pill', style: 'background:#dbeafe;color:#1d4ed8' }, `${procCount} proc`) : null,
+          ),
+        ),
+        el('div', { class: 'wo-meta' },
+          el('span', { style: 'font-weight:700' }, `Status: ${(w.status||'open').replace('_',' ')}`),
+          w.customerName ? el('span', { style: 'font-weight:700' }, `Customer: ${w.customerName}`) : null,
+          assetName ? el('span', {}, `Asset: ${assetName}`) : null,
+          el('span', {}, `Assignee: ${w.assignee||'—'}`),
+          el('span', {}, `Created: ${fmtDate(w.createdAt)}`),
+          agedays>0 ? el('span', { style: `color:${ageColor};font-weight:600` }, `${agedays}d open`) : null,
+        ),
+        w.description ? el('div', { class: 'wo-desc' }, w.description) : null,
+      );
+    };
     if (state.activeWoTab === 'invoiced') {
       // Group invoiced WOs into customer folders
       const groups = {};
@@ -2324,7 +2379,7 @@ function openWoForm(wo) {
   $('#wof-desc').value = wo ? (wo.description || '') : '';
   $('#wof-status').value = wo ? (wo.status || 'open') : 'open';
   $('#wof-priority').value = wo ? (wo.priority || 'medium') : 'medium';
-  $('#wof-assignee').value = wo ? (wo.assignee || '') : '';
+  (() => { const fillA = (us) => { const s = $('#wof-assignee'); if(!s) return; const cur = wo?(wo.assignee||''):''; s.innerHTML='<option value="">-- Unassigned --</option>'; (us||[]).forEach(u=>{const n=u.displayName||u.username; const o=document.createElement('option'); o.value=n; o.textContent=n; s.appendChild(o);}); s.value=cur; }; fillA(usersLiteCache||[]); ensureUsersLite().then(fillA); })();
   $('#wof-scheduled-start').value = wo && wo.scheduledStart ? wo.scheduledStart.slice(0, 16) : '';
   $('#wof-scheduled-end').value = wo && wo.scheduledEnd ? wo.scheduledEnd.slice(0, 16) : '';
 
@@ -2594,7 +2649,8 @@ function openWoForm(wo) {
       const endRef = completed || new Date();
       const days = Math.max(0, Math.floor((endRef - created) / MS_PER_DAY));
       const label = completed ? `Days to complete: ${days}` : `Days since created: ${days}`;
-      metaBits.push(el('span', { style: 'font-weight:600' }, label));
+      const urgColor = completed ? 'var(--text)' : days >= 14 ? '#dc2626' : days >= 7 ? '#d97706' : 'var(--text)';
+      metaBits.push(el('span', { style: `font-weight:700;color:${urgColor}` }, label));
     }
   })();
   // ===== T21 END =====
@@ -2796,6 +2852,10 @@ function openWoForm(wo) {
         statusSel.style.display = 'none';
         textInput.placeholder = scope === 'customer'
           ? 'Type a customer name…'
+          : scope === 'title'
+          ? 'Type a job title…'
+          : scope === 'assignee'
+          ? 'Type an assignee name…'
           : 'Type asset name, serial, or unit #…';
       }
       updateClearBtnVisibility();
@@ -3982,21 +4042,37 @@ function renderCustomers() {
   }
   const rows = customersCache.map((c) => {
     const assetCount = assetsCache.filter((a) => a.customerId === c.id).length;
+    const woArr = (typeof state!=='undefined'&&state.workorders)?state.workorders.filter(w=>w.customerId===c.id||w.customerName===c.name):[];
+    const woCount = woArr.length;
     return `
       <tr>
         <td><strong>${escapeHtml(c.name)}</strong></td>
         <td>${assetCount}</td>
+        <td>${woCount>0?`<button class="btn btn-secondary btn-sm" data-view-wo-customer="${c.id}" data-customer-name="${escapeHtml(c.name)}">${woCount} WO${woCount!==1?'s':''}</button>`:'—'}</td>
         <td style="color:var(--muted); font-size:13px;">${escapeHtml((c.notes || '').slice(0, 80))}${(c.notes || '').length > 80 ? '…' : ''}</td>
         <td><button class="btn btn-secondary btn-sm" data-edit-customer="${c.id}">Edit</button></td>
       </tr>`;
   }).join('');
   root.innerHTML = `
     <table class="data-table">
-      <thead><tr><th>Name</th><th>Assets</th><th>Notes</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th>Assets</th><th>Work Orders</th><th>Notes</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   root.querySelectorAll('[data-edit-customer]').forEach((b) => {
     b.addEventListener('click', () => openCustomerForm(b.dataset.editCustomer));
+  });
+  root.querySelectorAll('[data-view-wo-customer]').forEach((b) => {
+    b.addEventListener('click', () => {
+      if (typeof state!=='undefined') {
+        state.view='workorders'; state.activeWoTab='created';
+        document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view==='workorders'));
+        document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='workorders-view'));
+        const sc=document.getElementById('wo-search-scope'); const ti=document.getElementById('wo-search-text');
+        if(sc) sc.value='customer'; if(ti) ti.value=b.dataset.customerName;
+        woSearch.scope='customer'; woSearch.text=b.dataset.customerName;
+        renderWorkOrders();
+      }
+    });
   });
 }
 
@@ -4009,6 +4085,9 @@ function renderAssets() {
   }
   const rows = assetsCache.map((a) => {
     const cust = customersCache.find((c) => c.id === a.customerId);
+    const aWOs = (typeof state!=='undefined'&&state.workorders)?state.workorders.filter(w=>w.assetId===a.id):[];
+    const openWOs = aWOs.filter(w=>(w.status||'open')!=='invoiced');
+    const woBtn = aWOs.length>0?`<button class="btn btn-secondary btn-sm" style="margin-right:4px" data-asset-history="${a.id}" data-asset-name="${escapeHtml(a.name)}">${openWOs.length} open / ${aWOs.length} total</button>`:'—';
     return `
       <tr>
         <td><strong>${escapeHtml(a.name)}</strong></td>
@@ -4017,16 +4096,29 @@ function renderAssets() {
         <td>${escapeHtml(a.serialNumber || '')}</td>
         <td>${escapeHtml(a.unitNumber || '')}</td>
         <td>${a.currentHours == null ? '—' : a.currentHours}</td>
-        <td><button class="btn btn-secondary btn-sm" data-edit-asset="${a.id}">Edit</button></td>
+        <td>${woBtn}<button class="btn btn-secondary btn-sm" data-edit-asset="${a.id}">Edit</button></td>
       </tr>`;
   }).join('');
   root.innerHTML = `
     <table class="data-table">
-      <thead><tr><th>Name</th><th>Customer</th><th>Make/Model</th><th>Serial #</th><th>Unit #</th><th>Hours</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th>Customer</th><th>Make/Model</th><th>Serial #</th><th>Unit #</th><th>Hours</th><th>Work Orders</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   root.querySelectorAll('[data-edit-asset]').forEach((b) => {
     b.addEventListener('click', () => openAssetForm(b.dataset.editAsset));
+  });
+  root.querySelectorAll('[data-asset-history]').forEach((b) => {
+    b.addEventListener('click', () => {
+      if (typeof state!=='undefined') {
+        state.view='workorders'; state.activeWoTab='created';
+        document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view==='workorders'));
+        document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='workorders-view'));
+        const sc=document.getElementById('wo-search-scope'); const ti=document.getElementById('wo-search-text');
+        if(sc) sc.value='asset'; if(ti) ti.value=b.dataset.assetName;
+        woSearch.scope='asset'; woSearch.text=b.dataset.assetName;
+        renderWorkOrders();
+      }
+    });
   });
 }
 
