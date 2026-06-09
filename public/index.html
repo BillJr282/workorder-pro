@@ -962,6 +962,72 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
 .btn svg:first-child { margin-right: 4px; }
 .btn-icon svg, .mobile-menu-btn svg, .chat-fab svg, #chat-send svg, #logout-btn svg { display: block; }
 .nav-item svg { margin-right: 6px; vertical-align: middle; flex-shrink: 0; }
+
+  /* ===== Procedure Folder UI ===== */
+  .proc-folder-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .proc-folder-header:hover { background: var(--surface-hover, #f9fafb); }
+  .proc-folder-icon { display: flex; align-items: center; flex-shrink: 0; }
+  .proc-folder-chevron { display: flex; align-items: center; flex-shrink: 0; color: #6b7280; }
+  .proc-folder-name { flex: 1; }
+  .proc-folder-content { padding-left: 20px; margin-bottom: 8px; }
+  .proc-subfolder-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 6px;
+    margin-bottom: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 13px;
+    color: #374151;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .proc-subfolder-header:hover { background: var(--surface-hover, #f9fafb); }
+  .proc-subfolder-content { padding-left: 18px; }
+
+  /* ===== Attach Modal Category Headers ===== */
+  .attach-cat-header {
+    display: flex;
+    align-items: center;
+    font-weight: 700;
+    font-size: 13px;
+    color: #374151;
+    padding: 8px 4px 4px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 4px;
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .attach-cat-header:first-child { margin-top: 0; }
+  .attach-subcat-header {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    font-size: 12px;
+    color: #6b7280;
+    padding: 5px 4px 3px 10px;
+    margin-bottom: 3px;
+  }
+  .attach-item-indented { margin-left: 16px; }
 </style>
 </head>
 <body>
@@ -1376,6 +1442,10 @@ button svg, .btn svg { vertical-align: middle; display: inline-block; flex-shrin
       <div class="field-row">
         <label>Description</label>
         <textarea id="pb-desc" rows="2"></textarea>
+      </div>
+      <div class="field-row" style="display:flex;gap:8px;">
+        <div style="flex:1"><label>Category</label><select id="pb-category" class="form-control"><option value="">-- Category --</option><option value="Fire Suppression">Fire Suppression</option><option value="Preventative Maintenance">Preventative Maintenance</option></select></div>
+        <div style="flex:1"><label>Subcategory</label><select id="pb-subcategory" class="form-control"><option value="">-- None --</option></select></div>
       </div>
       <div class="field-row">
         <label>Fields</label>
@@ -2790,6 +2860,25 @@ function openWoForm(wo) {
   }
 
   // ===== Procedures list =====
+  function makeProcCard(p) {
+    return el('div', { class: 'card proc-card' },
+      el('div', { class: 'proc-card-header' },
+        el('div', { class: 'proc-title' }, p.name || '(untitled)'),
+        el('span', { class: 'pill' }, `${(p.fields || []).length} fields`),
+      ),
+      p.description ? el('div', { class: 'proc-desc' }, p.description) : null,
+      el('div', { class: 'card-actions' },
+        el('button', { class: 'btn btn-secondary btn-sm', onclick: (ev) => { ev.stopPropagation(); openProcedureBuilder(p); } }, 'Edit'),
+        el('button', { class: 'btn btn-danger btn-sm', onclick: async (ev) => {
+          ev.stopPropagation();
+          if (!confirm(`Delete procedure "${p.name}"? This cannot be undone.`)) return;
+          try { await apiFetch(`/api/procedures/${p.id}`, { method: 'DELETE' }); await refreshAll(); }
+          catch (err) { alert('Delete failed: ' + err.message); }
+        }}, 'Delete'),
+      ),
+    );
+  }
+
   function renderProcedures() {
     const list = $('#proc-list');
     list.innerHTML = '';
@@ -2797,24 +2886,51 @@ function openWoForm(wo) {
       list.appendChild(el('div', { class: 'empty' }, 'No procedures yet. Click "+ New Procedure" to build one.'));
       return;
     }
+    if (!state.folderOpen) state.folderOpen = {};
+    const grouped = {};
     state.procedures.forEach(p => {
-      const card = el('div', { class: 'card proc-card' },
-        el('div', { class: 'proc-card-header' },
-          el('div', { class: 'proc-title' }, p.name || '(untitled)'),
-          el('span', { class: 'pill' }, `${(p.fields || []).length} fields`),
-        ),
-        p.description ? el('div', { class: 'proc-desc' }, p.description) : null,
-        el('div', { class: 'card-actions' },
-          el('button', { class: 'btn btn-secondary btn-sm', onclick: (ev) => { ev.stopPropagation(); openProcedureBuilder(p); } }, 'Edit'),
-          el('button', { class: 'btn btn-danger btn-sm', onclick: async (ev) => {
-            ev.stopPropagation();
-            if (!confirm(`Delete procedure "${p.name}"? This cannot be undone.`)) return;
-            try { await apiFetch(`/api/procedures/${p.id}`, { method: 'DELETE' }); await refreshAll(); }
-            catch (err) { alert('Delete failed: ' + err.message); }
-          }}, 'Delete'),
-        ),
-      );
-      list.appendChild(card);
+      const cat = (p.category || '').trim() || 'Uncategorized';
+      const sub = (p.subcategory || '').trim() || '';
+      if (!grouped[cat]) grouped[cat] = {};
+      const sk = sub || '__none__';
+      if (!grouped[cat][sk]) grouped[cat][sk] = [];
+      grouped[cat][sk].push(p);
+    });
+    const CAT_ORDER = ['Fire Suppression', 'Preventative Maintenance', 'Uncategorized'];
+    const cats = [...new Set([...CAT_ORDER.filter(c => grouped[c]), ...Object.keys(grouped).filter(c => !CAT_ORDER.includes(c))])];    cats.forEach(cat => {
+      const catKey = 'cat_' + cat;
+      if (state.folderOpen[catKey] === undefined) state.folderOpen[catKey] = true;
+      const isOpen = state.folderOpen[catKey];
+      const subGroups = grouped[cat];
+      const totalProcs = Object.values(subGroups).reduce((s,a)=>s+a.length,0);
+      const catHeader = el('div', { class: 'proc-folder-header', onclick: () => { state.folderOpen[catKey] = !state.folderOpen[catKey]; renderProcedures(); } });
+      const folderIcon = isOpen ? '<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"#f59e0b\" stroke=\"#d97706\" stroke-width=\"1.5\"><path d=\"M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg>' : '<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"#fbbf24\" stroke=\"#d97706\" stroke-width=\"1.5\"><path d=\"M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg>';
+      const chev = isOpen ? '<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"><polyline points=\"6 9 12 15 18 9\"/></svg>' : '<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"><polyline points=\"9 18 15 12 9 6\"/></svg>';
+      catHeader.innerHTML = `<span class="proc-folder-icon">${folderIcon}</span><span class="proc-folder-chevron">${chev}</span><span class="proc-folder-name">${cat}</span><span class="pill" style="margin-left:auto">${totalProcs} procedure${totalProcs!==1?'s':''}</span>`;
+      list.appendChild(catHeader);
+      if (!isOpen) return;
+      const catContent = el('div', { class: 'proc-folder-content' });      const subKeys = Object.keys(subGroups).sort((a,b)=>a==='__none__'?1:b==='__none__'?-1:a.localeCompare(b));
+      subKeys.forEach(sk => {
+        const procs = subGroups[sk];
+        if (sk === '__none__') {
+          procs.forEach(p => catContent.appendChild(makeProcCard(p)));
+        } else {
+          const subKey = 'sub_' + cat + '_' + sk;
+          if (state.folderOpen[subKey] === undefined) state.folderOpen[subKey] = true;
+          const subOpen = state.folderOpen[subKey];
+          const subHeader = el('div', { class: 'proc-subfolder-header', onclick: (e) => { e.stopPropagation(); state.folderOpen[subKey] = !state.folderOpen[subKey]; renderProcedures(); } });
+          const sIcon = subOpen ? '<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"#60a5fa\" stroke=\"#3b82f6\" stroke-width=\"1.5\"><path d=\"M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg>' : '<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"#93c5fd\" stroke=\"#3b82f6\" stroke-width=\"1.5\"><path d=\"M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg>';
+          const sChev = subOpen ? '<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"><polyline points=\"6 9 12 15 18 9\"/></svg>' : '<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"><polyline points=\"9 18 15 12 9 6\"/></svg>';
+          subHeader.innerHTML = `<span class="proc-folder-icon">${sIcon}</span><span class="proc-folder-chevron">${sChev}</span><span class="proc-folder-name">${sk}</span><span class="pill" style="margin-left:auto">${procs.length}</span>`;
+          catContent.appendChild(subHeader);
+          if (subOpen) {
+            const subContent = el('div', { class: 'proc-subfolder-content' });
+            procs.forEach(p => subContent.appendChild(makeProcCard(p)));
+            catContent.appendChild(subContent);
+          }
+        }
+      });
+      list.appendChild(catContent);
     });
   }
   $('#new-proc-btn').addEventListener('click', () => openProcedureBuilder(null));
@@ -3041,13 +3157,35 @@ function openWoForm(wo) {
     if (!state.procedures.length) {
       list.appendChild(el('div', { class: 'empty' }, 'No procedures available. Build one first.'));
     } else {
+      const ag = {};
       state.procedures.forEach(p => {
-        list.appendChild(el('div', { class: 'attach-item' },
-          el('div', {},
-            el('div', { class: 'proc-title' }, p.name),
-            el('div', { class: 'proc-desc small' }, `${(p.fields || []).length} fields`),
-          ),
-          el('button', { class: 'btn btn-sm', onclick: async () => {
+        const cat = (p.category || '').trim() || 'Uncategorized';
+        const sub = (p.subcategory || '').trim() || '';
+        if (!ag[cat]) ag[cat] = {};
+        const sk = sub || '__none__';
+        if (!ag[cat][sk]) ag[cat][sk] = [];
+        ag[cat][sk].push(p);
+      });
+      const ACAT_ORDER = ['Fire Suppression', 'Preventative Maintenance', 'Uncategorized'];
+      const aCats = [...new Set([...ACAT_ORDER.filter(c => ag[c]), ...Object.keys(ag).filter(c => !ACAT_ORDER.includes(c))])];
+      aCats.forEach(cat => {
+        const catLbl = el('div', { class: 'attach-cat-header' });
+        catLbl.innerHTML = `<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"#f59e0b\" stroke=\"#d97706\" stroke-width=\"1.5\" style=\"margin-right:6px\"><path d=\"M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg>${cat}`;
+        list.appendChild(catLbl);
+        const subKeys = Object.keys(ag[cat]).sort((a,b)=>a==='__none__'?1:b==='__none__'?-1:a.localeCompare(b));
+        subKeys.forEach(sk => {
+          if (sk !== '__none__') {
+            const subLbl = el('div', { class: 'attach-subcat-header' });
+            subLbl.innerHTML = `<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"#60a5fa\" stroke=\"#3b82f6\" stroke-width=\"1.5\" style=\"margin-right:5px\"><path d=\"M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg>${sk}`;
+            list.appendChild(subLbl);
+          }
+          ag[cat][sk].forEach(p => {
+            list.appendChild(el('div', { class: 'attach-item' + (sk !== '__none__' ? ' attach-item-indented' : '') },
+              el('div', {},
+                el('div', { class: 'proc-title' }, p.name),
+                el('div', { class: 'proc-desc small' }, `${(p.fields || []).length} fields`),
+              ),
+              el('button', { class: 'btn btn-sm', onclick: async () => {
             try {
               await apiFetch(`/api/workorders/${woId}/procedures`, {
                 method: 'POST', body: JSON.stringify({ procedureId: p.id }),
@@ -3056,7 +3194,9 @@ function openWoForm(wo) {
               await refreshAll();
             } catch (e) { alert('Attach failed: ' + e.message); }
           }}, 'Attach'),
-        ));
+            ));
+          });
+        });
       });
     }
     openModal('attach-modal');
@@ -3075,12 +3215,40 @@ function openWoForm(wo) {
     { value: 'photo', label: 'Photo' },
   ];
 
+  const PB_SUBCATEGORIES = {
+    'Fire Suppression': ['AFEX Systems', 'Other'],
+    'Preventative Maintenance': ['CAT', 'Sullair', 'John Deere', 'Forklift', 'Other'],
+  };
+
+  function updatePBSubcategoryOptions(cat) {
+    const sel = document.getElementById('pb-subcategory');
+    if (!sel) return;
+    const subs = PB_SUBCATEGORIES[cat] || [];
+    sel.innerHTML = '<option value="">-- None --</option>';
+    subs.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s; opt.textContent = s;
+      sel.appendChild(opt);
+    });
+  }
+
+  document.addEventListener('change', function(e) {
+    if (e.target && e.target.id === 'pb-category') {
+      updatePBSubcategoryOptions(e.target.value);
+      const sub = document.getElementById('pb-subcategory');
+      if (sub) sub.value = '';
+    }
+  });
+
   function openProcedureBuilder(proc) {
     state.editingProc = proc;
     state.pbFields = proc ? JSON.parse(JSON.stringify(proc.fields || [])) : [];
     $('#pb-title').textContent = proc ? 'Edit Procedure' : 'New Procedure';
     $('#pb-name').value = proc ? (proc.name || '') : '';
     $('#pb-desc').value = proc ? (proc.description || '') : '';
+    updatePBSubcategoryOptions(proc ? (proc.category || '') : '');
+    $('#pb-category').value = proc ? (proc.category || '') : '';
+    $('#pb-subcategory').value = proc ? (proc.subcategory || '') : '';
     $('#pb-delete').style.display = proc ? '' : 'none';
     $('#ai-panel-wrap').style.display = 'none';
     $('#ai-prompt').value = '';
@@ -3195,7 +3363,9 @@ function openWoForm(wo) {
       type: f.type || 'checkbox',
       required: !!f.required,
     }));
-    const payload = { name, description, fields };
+    const category = $('#pb-category').value;
+    const subcategory = $('#pb-subcategory').value;
+    const payload = { name, description, fields, category, subcategory };
     try {
       if (state.editingProc) {
         await apiFetch(`/api/procedures/${state.editingProc.id}`, { method: 'PUT', body: JSON.stringify(payload) });
